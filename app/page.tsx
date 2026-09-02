@@ -99,6 +99,10 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
   useEffect(() => { setRunning(false); setCurrent(0); setSeconds(0); },[selectedEvent]);
   const [view, setView] = useState('calendar');
+  const displayName = session.user.user_metadata?.name || 'Meu perfil';
+  const initials = session.user.user_metadata?.name ? String(session.user.user_metadata.name).trim().split(/\s+/).map(part=>part[0]).slice(0,2).join('').toUpperCase() : 'EU';
+  const event = events.find(e=>e.id===selectedEvent);
+  const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   const [current, setCurrent] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
@@ -273,8 +277,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               ) : null}
             </button>
           ))}
+          {role === 'admin' && <button title="Configurações" className={`nav-item ${view==='settings' ? 'active' : ''}`} onClick={()=>setView('settings')}><Settings size={17}/>Configurações</button>}
         </nav>
-        <div className="side-caption">
+        {event && <div className="side-caption">
           <span>EVENTO SELECIONADO</span>
           <strong>{events.find((e) => e.id === selectedEvent)?.title}</strong>
           <small>
@@ -286,11 +291,12 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               .join('/')}
           </small>
         </div>
+        }
         <button className="sidebar-footer" onClick={() => setProfileOpen(true)}>
-          <div className="avatar">LC</div>
+          <div className="avatar">{initials}</div>
           <div>
-            <strong>{session.user.user_metadata?.name || session.user.email}</strong>
-            <small>{role}</small>
+            <strong>{displayName}</strong>
+            <small>{role==='admin' ? 'Administrador' : role==='manager' ? 'Manager' : 'Voluntário'}</small>
           </div>
           <Settings size={15} />
         </button>
@@ -298,23 +304,11 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">
-              ZION CHURCH •{' '}
-              {events.find((e) => e.id === selectedEvent)?.type.toUpperCase()}
-            </p>
-            <h1>
-              {events.find((e) => e.id === selectedEvent)?.title} •{' '}
-              {events
-                .find((e) => e.id === selectedEvent)
-                ?.date.split('-')
-                .reverse()
-                .join('/')}
-            </h1>
+            <p className="eyebrow">ZION CHURCH{event && view!=='settings' ? ' • '+event.type.toUpperCase() : ''}</p>
+            <h1>{view==='settings' ? 'Administração' : event ? event.title+' • '+event.date.split('-').reverse().join('/') : 'Agenda da igreja'}</h1>
           </div>
           <div className="top-actions">
-            <span className="status-pill">
-              <span /> Supabase
-            </span>
+
             {view === 'live' && (
               <button
                 className="ghost-btn"
@@ -324,9 +318,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                 {liveFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
               </button>
             )}
-            <button className="ghost-btn" onClick={() => setView('schedule')}>
-              Editar cronograma
-            </button>
+            {event && view!=='settings' && <button className="ghost-btn" onClick={() => setView('schedule')}>Editar cronograma</button>}
             <div className="more-wrap">
               <button
                 className="icon-btn"
@@ -367,8 +359,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           </div>
         </header>
         <div className="page-wrap">
-          <p role="status" className="sync-status">{loading ? 'Carregando dados…' : status} <button className="ghost-btn" onClick={() => window.location.reload()}>Atualizar dados</button></p>
-          {!selectedEvent && <p>Crie um evento no calendário para começar. O banco inicia vazio, sem os dados de demonstração.</p>}
+          {failed && view!=='settings' && <p role="alert" className="operation-error">Não foi possível concluir a operação. Verifique sua conexão e tente novamente.{role==='admin' && <button onClick={()=>setView('settings')}>Ver detalhes</button>}</p>}
+          {view==='settings' && role==='admin' && <AccountPanel settings session={session} role={role} status={loading ? 'Carregando dados…' : status} close={()=>setView('calendar')}/>}
+
           {view === 'live' && !active && <div className="surface"><h2>Nenhum momento neste evento</h2><button className="primary-solid" onClick={() => setView('schedule')}>Montar cronograma</button></div>}
           {view === 'live' && active && (
             <>
@@ -1419,7 +1412,7 @@ function VolunteerModal({
           </label>
         </div>
         <p className="user-note">
-          O cadastro do voluntário não libera o login. O administrador autoriza o e-mail em Meu perfil → Acessos.
+          O cadastro do voluntário não libera o login. O administrador autoriza o e-mail em Configurações → Usuários e acessos.
         </p>
         <div className="modal-actions">
           <button type="button" className="ghost-btn" onClick={close}>

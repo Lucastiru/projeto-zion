@@ -39,7 +39,7 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
     const credentials = { email: String(form.get('email')).trim().toLowerCase(), password: String(form.get('password')) };
     try {
       const result = signup
-        ? await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: window.location.origin } })
+        ? await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: window.location.origin, data: { first_name: String(form.get('first_name')).trim(), last_name: String(form.get('last_name')).trim(), name: `${String(form.get('first_name')).trim()} ${String(form.get('last_name')).trim()}` } } })
         : await supabase.auth.signInWithPassword(credentials);
       if (result.error) throw result.error;
       if (signup && !result.data.session) setMessage('Confirme o cadastro pelo e-mail enviado. Depois volte aqui e entre com sua senha.');
@@ -58,6 +58,7 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
       <Button onClick={() => supabase.auth.signOut()}>Sair e trocar de conta</Button>
     </> : <form onSubmit={submit}>
       <p>{signup ? 'Crie sua senha. O acesso aos dados depende da autorização do administrador.' : 'Entre para organizar os cultos com a sua equipe.'}</p>
+      {signup && <div className="form-grid"><label>Nome<Input name="first_name" autoComplete="given-name" required maxLength={60}/></label><label>Sobrenome<Input name="last_name" autoComplete="family-name" required maxLength={80}/></label></div>}
       <label>E-mail<Input name="email" type="email" autoComplete="email" required /></label>
       <label>Senha<Input name="password" type="password" minLength={8} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
       <Button type="submit" disabled={busy}>{busy ? 'Aguarde…' : signup ? 'Criar minha conta' : 'Entrar'}</Button>
