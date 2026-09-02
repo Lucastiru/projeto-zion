@@ -13,18 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Ordem — Operação de cultos',
-  description: 'Planeje, prepare e conduza cada momento do culto em um só lugar.',
+  title: 'Zion Church | Ordem',
+  description: 'Planeje, prepare e conduza cada evento da Zion Church em um só lugar.',
   openGraph: {
-    title: 'Ordem — Operação de cultos',
-    description: 'Cada momento no tempo certo.',
-    images: ['/og.png'],
+    title: 'Zion Church | Ordem',
+    description: 'Cada evento, equipe e momento no tempo certo.',
+    images: ['/zion-logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Ordem — Operação de cultos',
-    description: 'Cada momento no tempo certo.',
-    images: ['/og.png'],
+    title: 'Zion Church | Ordem',
+    description: 'Cada evento, equipe e momento no tempo certo.',
+    images: ['/zion-logo.png'],
   },
 };
 
