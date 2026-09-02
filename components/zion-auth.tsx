@@ -48,8 +48,11 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
   }
   if (session && role && role !== 'denied') return children(session, role);
   return <main className="auth-screen"><section className="modal auth-card">
-    <img src="/zion-logo.png" alt="Zion Church" width="64" height="64" />
-    <p className="eyebrow">ZION CHURCH • ORDEM</p><h1>A equipe começa aqui.</h1>
+    <header className="auth-heading">
+      <img src="/zion-logo.png" alt="Zion Church" width="72" height="72" />
+      <p className="eyebrow">ZION CHURCH • ORDEM</p>
+      <h1>A equipe começa aqui.</h1>
+    </header>
     {loading || (session && role === null) ? <p>Verificando seu acesso…</p> : session ? <>
       <p>Seu e-mail ainda não está autorizado. Peça ao administrador para liberar seu acesso.</p>
       <Button onClick={() => supabase.auth.signOut()}>Sair e trocar de conta</Button>
