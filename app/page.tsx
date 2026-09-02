@@ -28,6 +28,7 @@ import {
   Plus,
   Radio,
   Settings,
+  ShieldCheck,
   Trash2,
   Users,
   X,
@@ -73,14 +74,15 @@ export type Volunteer = {
   scheduled: boolean;
   photo?: string;
 };
+// O quarto item é o rótulo curto, usado na barra inferior do celular.
 const nav = [
-  ['calendar', 'Calendário', CalendarDays],
-  ['live', 'Operação ao vivo', Radio],
-  ['schedule', 'Cronograma', LayoutList],
-  ['prep', 'Preparação', CheckCircle2],
-  ['volunteers', 'Voluntários', Users],
-  ['issues', 'Problemas', CircleAlert],
-  ['report', 'Relatório', BarChart3],
+  ['calendar', 'Calendário', CalendarDays, 'Agenda'],
+  ['live', 'Operação ao vivo', Radio, 'Ao vivo'],
+  ['schedule', 'Cronograma', LayoutList, 'Ordem'],
+  ['prep', 'Preparação', CheckCircle2, 'Preparo'],
+  ['volunteers', 'Voluntários', Users, 'Equipe'],
+  ['issues', 'Problemas', CircleAlert, 'Problemas'],
+  ['report', 'Relatório', BarChart3, 'Números'],
 ] as const;
 function safeDuration(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 1;
@@ -265,21 +267,23 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           </button>
         </div>
         <nav>
-          {nav.map(([id, label, Icon]) => (
+          {nav.map(([id, label, Icon, short]) => (
             <button
               key={id}
               className={`nav-item ${view === id ? 'active' : ''}`}
               onClick={() => setView(id)}
+              title={label}
             >
               <Icon size={17} />
-              {label}
+              <span className="nav-label">{label}</span>
+              <span className="nav-label-short">{short}</span>
               {id === 'issues' && issues.some((i) => i.status === 'Aberto') ? (
                 <b className="nav-dot" />
               ) : null}
             </button>
           ))}
-          {role==='admin' && <button title="Usuários e acessos" className={`nav-item ${view==='users' ? 'active' : ''}`} onClick={()=>setView('users')}><Users size={17}/>Usuários e acessos</button>}
-          {role === 'admin' && <button title="Configurações" className={`nav-item ${view==='settings' ? 'active' : ''}`} onClick={()=>setView('settings')}><Settings size={17}/>Configurações</button>}
+          {role==='admin' && <button title="Usuários e acessos" className={`nav-item ${view==='users' ? 'active' : ''}`} onClick={()=>setView('users')}><ShieldCheck size={17}/><span className="nav-label">Usuários e acessos</span><span className="nav-label-short">Acessos</span></button>}
+          {role === 'admin' && <button title="Configurações" className={`nav-item ${view==='settings' ? 'active' : ''}`} onClick={()=>setView('settings')}><Settings size={17}/><span className="nav-label">Configurações</span><span className="nav-label-short">Ajustes</span></button>}
         </nav>
         {event && <div className="side-caption">
           <span>EVENTO SELECIONADO</span>
@@ -626,6 +630,11 @@ function CalendarView({
   const prefix = `${month.getFullYear()}-${String(month.getMonth()+1).padStart(2,'0')}-`;
   const days = [...Array.from({length:(month.getDay()+6)%7},()=>null), ...Array.from({ length: new Date(month.getFullYear(),month.getMonth()+1,0).getDate() }, (_, i) => i + 1)];
   const week = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+  // A grade de 7 colunas não cabe num celular. A agenda abaixo mostra os mesmos
+  // eventos em lista, e é ela que aparece no lugar da grade em telas estreitas.
+  const monthEvents = events
+    .filter(e => e.date.startsWith(prefix))
+    .sort((a,b) => a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
   return (
     <div className="surface calendar-surface">
       <div className="view-head">
@@ -648,7 +657,7 @@ function CalendarView({
         <button aria-label="Próximo mês" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}>
           <ChevronRight size={17} />
         </button>
-        <span>{events.length} eventos</span>
+        <span>{monthEvents.length} {monthEvents.length === 1 ? 'evento' : 'eventos'}</span>
       </div>
       <div className="calendar-grid">
         {week.map((w) => (
@@ -683,6 +692,30 @@ function CalendarView({
           ),
         )}
       </div>
+      <ul className="calendar-agenda">
+        {monthEvents.length ? monthEvents.map((e) => (
+          <li key={e.id}>
+            <button
+              className={`agenda-item ${e.id === selectedEvent ? 'selected' : ''}`}
+              onClick={() => choose(e.id)}
+            >
+              <span className="agenda-date">
+                <strong>{Number(e.date.slice(8,10))}</strong>
+                <small>{new Date(`${e.date}T12:00:00`).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')}</small>
+              </span>
+              <span className="agenda-body">
+                <strong>{e.title}</strong>
+                <small>{e.time} · {e.type}{e.location ? ` · ${e.location}` : ''}</small>
+              </span>
+              <ChevronRight size={16} />
+            </button>
+          </li>
+        )) : (
+          <li className="agenda-empty">
+            Nenhum evento em {month.toLocaleDateString('pt-BR',{month:'long'})}.
+          </li>
+        )}
+      </ul>
       <div className="calendar-hint">
         <CalendarDays size={17} />
         <span>
