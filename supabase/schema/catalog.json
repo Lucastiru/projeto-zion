@@ -1,0 +1,1009 @@
+{
+  "enums": [],
+  "sequences": [],
+  "tables": [
+    {
+      "name": "zion_access",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_events",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_feedback",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_issues",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_moments",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_preparation",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_roster",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    },
+    {
+      "name": "zion_volunteers",
+      "rls": true,
+      "force_rls": false,
+      "comment": null
+    }
+  ],
+  "columns": [
+    {
+      "table": "zion_access",
+      "name": "email",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_access",
+      "name": "role",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'volunteer'::text",
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_access",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "title",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "event_date",
+      "type": "date",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "start_time",
+      "type": "time without time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "event_type",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'Culto'::text",
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "location",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_events",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 7,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_feedback",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_feedback",
+      "name": "content",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_feedback",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "area",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "description",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "resolved",
+      "type": "boolean",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "false",
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "position",
+      "type": "integer",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "0",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "title",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "duration_minutes",
+      "type": "integer",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "owner_name",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "details",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 7,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "sequence_items",
+      "type": "jsonb",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'[]'::jsonb",
+      "attnum": 8,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "completed",
+      "type": "boolean",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "false",
+      "attnum": 9,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "team",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "description",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "assigned_to",
+      "type": "uuid",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "completed",
+      "type": "boolean",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "false",
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "volunteer_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "name",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "email",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "team",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "phone",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "photo_url",
+      "type": "text",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 7,
+      "collation": null,
+      "comment": null
+    }
+  ],
+  "constraints": [
+    {
+      "table": "zion_access",
+      "name": "zion_access_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (email)"
+    },
+    {
+      "table": "zion_events",
+      "name": "zion_events_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "zion_feedback",
+      "name": "zion_feedback_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (event_id)"
+    },
+    {
+      "table": "zion_issues",
+      "name": "zion_issues_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "zion_moments",
+      "name": "zion_moments_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "zion_preparation",
+      "name": "zion_preparation_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "zion_roster",
+      "name": "zion_roster_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (event_id, volunteer_id)"
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "zion_volunteers_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "zion_volunteers_email_key",
+      "type": "u",
+      "def": "UNIQUE (email)"
+    },
+    {
+      "table": "zion_access",
+      "name": "zion_access_email_check",
+      "type": "c",
+      "def": "CHECK ((email = lower(email)))"
+    },
+    {
+      "table": "zion_access",
+      "name": "zion_access_role_check",
+      "type": "c",
+      "def": "CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'volunteer'::text])))"
+    },
+    {
+      "table": "zion_moments",
+      "name": "zion_moments_duration_minutes_check",
+      "type": "c",
+      "def": "CHECK ((duration_minutes > 0))"
+    },
+    {
+      "table": "zion_moments",
+      "name": "zion_moments_sequence_items_check",
+      "type": "c",
+      "def": "CHECK ((jsonb_typeof(sequence_items) = 'array'::text))"
+    },
+    {
+      "table": "zion_feedback",
+      "name": "zion_feedback_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_issues",
+      "name": "zion_issues_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_moments",
+      "name": "zion_moments_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_preparation",
+      "name": "zion_preparation_assigned_to_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (assigned_to) REFERENCES zion_volunteers(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "zion_preparation",
+      "name": "zion_preparation_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_roster",
+      "name": "zion_roster_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_roster",
+      "name": "zion_roster_volunteer_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (volunteer_id) REFERENCES zion_volunteers(id) ON DELETE CASCADE"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "zion_events_event_date_idx",
+      "table": "zion_events",
+      "def": "CREATE INDEX zion_events_event_date_idx ON public.zion_events USING btree (event_date)"
+    },
+    {
+      "name": "zion_issues_event_id_idx",
+      "table": "zion_issues",
+      "def": "CREATE INDEX zion_issues_event_id_idx ON public.zion_issues USING btree (event_id)"
+    },
+    {
+      "name": "zion_moments_event_id_position_idx",
+      "table": "zion_moments",
+      "def": "CREATE INDEX zion_moments_event_id_position_idx ON public.zion_moments USING btree (event_id, \"position\")"
+    },
+    {
+      "name": "zion_preparation_event_id_idx",
+      "table": "zion_preparation",
+      "def": "CREATE INDEX zion_preparation_event_id_idx ON public.zion_preparation USING btree (event_id)"
+    }
+  ],
+  "views": [],
+  "functions": [
+    {
+      "schema": "public",
+      "name": "zion_current_role",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_current_role()\n RETURNS text\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select role from public.zion_access\n  where email = lower(auth.jwt() ->> 'email') and auth.uid() is not null\n$function$\n"
+    }
+  ],
+  "triggers": [],
+  "platform_triggers": [
+    {
+      "schema": "storage",
+      "table": "buckets",
+      "name": "enforce_bucket_name_length_trigger"
+    },
+    {
+      "schema": "storage",
+      "table": "buckets",
+      "name": "protect_buckets_delete"
+    },
+    {
+      "schema": "storage",
+      "table": "objects",
+      "name": "protect_objects_delete"
+    },
+    {
+      "schema": "storage",
+      "table": "objects",
+      "name": "update_objects_updated_at"
+    }
+  ],
+  "policies": [
+    {
+      "table": "zion_access",
+      "name": "access_admin",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = 'admin'::text)",
+      "with_check": "(zion_current_role() = 'admin'::text)"
+    },
+    {
+      "table": "zion_access",
+      "name": "access_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "((email = lower((auth.jwt() ->> 'email'::text))) OR (zion_current_role() = 'admin'::text))",
+      "with_check": null
+    },
+    {
+      "table": "zion_events",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_events",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_feedback",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_feedback",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_issues",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_issues",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_moments",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_preparation",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_preparation",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_roster",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    }
+  ],
+  "grants": [
+    {
+      "table": "zion_access",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_access",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_events",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_events",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_feedback",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_feedback",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_issues",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_issues",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_moments",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_moments",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_preparation",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_preparation",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_roster",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_roster",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_volunteers",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_volunteers",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    }
+  ],
+  "counts": [
+    {
+      "table": "zion_access",
+      "rows": 1
+    },
+    {
+      "table": "zion_events",
+      "rows": 1
+    },
+    {
+      "table": "zion_feedback",
+      "rows": 0
+    },
+    {
+      "table": "zion_issues",
+      "rows": 0
+    },
+    {
+      "table": "zion_moments",
+      "rows": 9
+    },
+    {
+      "table": "zion_preparation",
+      "rows": 15
+    },
+    {
+      "table": "zion_roster",
+      "rows": 0
+    },
+    {
+      "table": "zion_volunteers",
+      "rows": 0
+    }
+  ]
+}
