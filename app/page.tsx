@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ZionAuth } from '@/components/zion-auth';
 import { AccountPanel } from '@/components/zion-account';
+import { UsersPanel, SettingsPanel } from '@/components/zion-users';
 import { useZionData } from '@/lib/zion-data';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -277,6 +278,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               ) : null}
             </button>
           ))}
+          {role==='admin' && <button title="Usuários e acessos" className={`nav-item ${view==='users' ? 'active' : ''}`} onClick={()=>setView('users')}><Users size={17}/>Usuários e acessos</button>}
           {role === 'admin' && <button title="Configurações" className={`nav-item ${view==='settings' ? 'active' : ''}`} onClick={()=>setView('settings')}><Settings size={17}/>Configurações</button>}
         </nav>
         {event && <div className="side-caption">
@@ -296,7 +298,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           <div className="avatar">{initials}</div>
           <div>
             <strong>{displayName}</strong>
-            <small>{role==='admin' ? 'Administrador' : role==='manager' ? 'Manager' : 'Voluntário'}</small>
+            <small>{role==='admin' ? 'Administrador' : role==='manager' ? 'Operador' : 'Somente leitura'}</small>
           </div>
           <Settings size={15} />
         </button>
@@ -304,8 +306,8 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">ZION CHURCH{event && view!=='settings' ? ' • '+event.type.toUpperCase() : ''}</p>
-            <h1>{view==='settings' ? 'Administração' : event ? event.title+' • '+event.date.split('-').reverse().join('/') : 'Agenda da igreja'}</h1>
+            <p className="eyebrow">ZION CHURCH{event && view!=='settings' && view!=='users' ? ' • '+event.type.toUpperCase() : ''}</p>
+            <h1>{view==='users' ? 'Usuários e acessos' : view==='settings' ? 'Configurações' : event ? event.title+' • '+event.date.split('-').reverse().join('/') : 'Agenda da igreja'}</h1>
           </div>
           <div className="top-actions">
 
@@ -318,7 +320,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                 {liveFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
               </button>
             )}
-            {event && view!=='settings' && <button className="ghost-btn" onClick={() => setView('schedule')}>Editar cronograma</button>}
+            {event && view!=='settings' && view!=='users' && <button className="ghost-btn" onClick={() => setView('schedule')}>Editar cronograma</button>}
             <div className="more-wrap">
               <button
                 className="icon-btn"
@@ -359,8 +361,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           </div>
         </header>
         <div className="page-wrap">
-          {failed && view!=='settings' && <p role="alert" className="operation-error">Não foi possível concluir a operação. Verifique sua conexão e tente novamente.{role==='admin' && <button onClick={()=>setView('settings')}>Ver detalhes</button>}</p>}
-          {view==='settings' && role==='admin' && <AccountPanel settings session={session} role={role} status={loading ? 'Carregando dados…' : status} close={()=>setView('calendar')}/>}
+          {failed && view!=='settings' && view!=='users' && <p role="alert" className="operation-error">Não foi possível concluir a operação. Verifique sua conexão e tente novamente.{role==='admin' && <button onClick={()=>setView('settings')}>Ver detalhes</button>}</p>}
+          {view==='users' && role==='admin' && <UsersPanel role={role} email={session.user.email || ''}/>}
+          {view==='settings' && role==='admin' && <SettingsPanel role={role} status={loading ? 'Carregando dados…' : status}/>}
 
           {view === 'live' && !active && <div className="surface"><h2>Nenhum momento neste evento</h2><button className="primary-solid" onClick={() => setView('schedule')}>Montar cronograma</button></div>}
           {view === 'live' && active && (
@@ -914,11 +917,10 @@ function VolunteersView({
     <div className="surface">
       <div className="view-head">
         <div>
-          <p className="eyebrow">USUÁRIOS E ESCALA</p>
+          <p className="eyebrow">EQUIPE E ESCALA</p>
           <h2>Voluntários</h2>
           <p>
-            Cada voluntário tem perfil próprio e pode ser selecionado para o
-            evento.
+            Pessoas que servem nos eventos. Este cadastro é independente do acesso ao sistema.
           </p>
         </div>
         <button
@@ -1356,7 +1358,7 @@ function VolunteerModal({
       <form className="modal" onSubmit={save}>
         <div className="modal-head">
           <div>
-            <p className="eyebrow">USUÁRIO</p>
+            <p className="eyebrow">VOLUNTÁRIO</p>
             <h3>{item ? 'Editar voluntário' : 'Cadastrar voluntário'}</h3>
           </div>
           <button type="button" onClick={close}>
@@ -1380,7 +1382,7 @@ function VolunteerModal({
           />
         </label>
         <label>
-          E-mail de acesso
+          E-mail de contato
           <input
             name="email"
             type="email"
@@ -1412,13 +1414,13 @@ function VolunteerModal({
           </label>
         </div>
         <p className="user-note">
-          O cadastro do voluntário não libera o login. O administrador autoriza o e-mail em Configurações → Usuários e acessos.
+          O cadastro do voluntário não libera o login. O administrador gerencia o login em Usuários e acessos, separadamente.
         </p>
         <div className="modal-actions">
           <button type="button" className="ghost-btn" onClick={close}>
             Cancelar
           </button>
-          <button className="primary-solid">Salvar usuário</button>
+          <button className="primary-solid">Salvar voluntário</button>
         </div>
       </form>
     </div>
