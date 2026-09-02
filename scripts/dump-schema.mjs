@@ -139,9 +139,8 @@ for (const t of catalog.tables) {
     else if (c.generated === 's' && c.default) piece += ` generated always as (${c.default}) stored`;
     else if (c.default) piece += ` default ${c.default}`;
     if (c.notnull) piece += ' not null';
-    if (c.default && /nextval\('([^']+)'/.test(c.default)) {
-      ownedBy.push(`alter sequence ${RegExp.$1} owned by public.${ident(t.name)}.${ident(c.name)};`);
-    }
+    const sequence = c.default && /nextval\('([^']+)'/.exec(c.default);
+    if (sequence) ownedBy.push(`alter sequence ${sequence[1]} owned by public.${ident(t.name)}.${ident(c.name)};`);
     return piece;
   });
   write(`create table if not exists public.${ident(t.name)} (\n${lines.join(',\n')}\n);`);
