@@ -1,5 +1,5 @@
 -- Baseline do schema public, extraído do projeto Supabase svcpwtmccskohjfbjqfx.
--- Gerado por scripts/dump-schema.mjs em 2026-09-02T23:02:59.072Z.
+-- Gerado por scripts/dump-schema.mjs em 2026-09-02T23:17:09.103Z.
 -- Reconstruído do catálogo do Postgres: confira antes de aplicar num banco novo.
 
 -- Tabelas
@@ -107,6 +107,23 @@ CREATE OR REPLACE FUNCTION public.zion_current_role()
 AS $function$
   select role from public.zion_access
   where email = lower(auth.jwt() ->> 'email') and auth.uid() is not null
+$function$;
+
+CREATE OR REPLACE FUNCTION public.zion_pending_users()
+ RETURNS TABLE(email text, name text, created_at timestamp with time zone, confirmed boolean)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select lower(u.email)::text,
+         coalesce(nullif(btrim(u.raw_user_meta_data ->> 'name'), ''), split_part(u.email, '@', 1))::text,
+         u.created_at,
+         u.email_confirmed_at is not null
+  from auth.users u
+  where public.zion_current_role() = 'admin'
+    and u.deleted_at is null
+    and not exists (select 1 from public.zion_access a where a.email = lower(u.email))
+  order by u.created_at
 $function$;
 
 -- Row Level Security
