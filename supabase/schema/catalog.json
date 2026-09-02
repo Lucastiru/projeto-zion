@@ -719,6 +719,11 @@
       "schema": "public",
       "name": "zion_current_role",
       "def": "CREATE OR REPLACE FUNCTION public.zion_current_role()\n RETURNS text\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select role from public.zion_access\n  where email = lower(auth.jwt() ->> 'email') and auth.uid() is not null\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_pending_users",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_pending_users()\n RETURNS TABLE(email text, name text, created_at timestamp with time zone, confirmed boolean)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select lower(u.email)::text,\n         coalesce(nullif(btrim(u.raw_user_meta_data ->> 'name'), ''), split_part(u.email, '@', 1))::text,\n         u.created_at,\n         u.email_confirmed_at is not null\n  from auth.users u\n  where public.zion_current_role() = 'admin'\n    and u.deleted_at is null\n    and not exists (select 1 from public.zion_access a where a.email = lower(u.email))\n  order by u.created_at\n$function$\n"
     }
   ],
   "triggers": [],
