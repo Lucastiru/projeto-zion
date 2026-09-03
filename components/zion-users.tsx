@@ -77,7 +77,7 @@ export function UsersPanel({email,role}:{email:string;role:string}) {
   const filtered=rows.filter(x=>x.email.includes(search.trim().toLowerCase()) && (filter==='all' || x.role===filter));
   return <section className="access-page">
     <div className="view-head"><div><p className="eyebrow">ADMINISTRAÇÃO</p><h2>Usuários e acessos</h2><p>Defina quem pode entrar e o que cada pessoa pode fazer.</p></div><Button className="primary-solid" onClick={()=>{setEditing('new');setFormError('');}}><Plus size={16}/>Autorizar usuário</Button></div>
-    <div className="access-summary"><ShieldCheck size={22}/><div><strong>Acesso ao sistema, separado da escala</strong><p>Cadastrar um voluntário não cria uma conta. Autorizar um usuário não o adiciona à escala.</p></div><span>{loading ? '…' : rows.length} autorizados</span></div>
+    <div className="access-summary"><ShieldCheck size={22}/><div><strong>Acesso ao sistema, separado da escala</strong><p>Cadastrar um voluntário não cria uma conta. Autorizar um usuário não o adiciona à escala.</p></div><span>{loading ? '…' : `${rows.length} ${rows.length === 1 ? 'autorizado' : 'autorizados'}`}</span></div>
     {!!pending.length && <div className="pending-card">
       <div className="pending-head"><UserPlus size={18}/><div><strong>Aguardando aprovação</strong><p>Criaram conta e ainda não enxergam nada do sistema.</p></div><span>{pending.length}</span></div>
       <ul className="pending-list">{pending.map(person=><li key={person.email}>
