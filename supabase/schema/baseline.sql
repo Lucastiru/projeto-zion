@@ -1,5 +1,5 @@
 -- Baseline do schema public, extraído do projeto Supabase svcpwtmccskohjfbjqfx.
--- Gerado por scripts/dump-schema.mjs em 2026-09-02T23:17:09.103Z.
+-- Gerado por scripts/dump-schema.mjs em 2026-09-03T00:09:49.711Z.
 -- Reconstruído do catálogo do Postgres: confira antes de aplicar num banco novo.
 
 -- Tabelas
@@ -16,8 +16,10 @@ create table if not exists public.zion_events (
   start_time time without time zone not null,
   event_type text default 'Culto'::text not null,
   location text default ''::text not null,
-  created_at timestamp with time zone default now() not null
+  created_at timestamp with time zone default now() not null,
+  notes_url text
 );
+comment on column public.zion_events.notes_url is 'Endereço dos recados do culto no Drive. Somente http(s).';
 
 create table if not exists public.zion_feedback (
   event_id uuid not null,
@@ -82,6 +84,7 @@ alter table public.zion_volunteers add constraint zion_volunteers_pkey PRIMARY K
 alter table public.zion_volunteers add constraint zion_volunteers_email_key UNIQUE (email);
 alter table public.zion_access add constraint zion_access_email_check CHECK ((email = lower(email)));
 alter table public.zion_access add constraint zion_access_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'volunteer'::text])));
+alter table public.zion_events add constraint zion_events_notes_url_check CHECK (((notes_url IS NULL) OR (notes_url ~* '^https?://[^[:space:]]+$'::text)));
 alter table public.zion_moments add constraint zion_moments_duration_minutes_check CHECK ((duration_minutes > 0));
 alter table public.zion_moments add constraint zion_moments_sequence_items_check CHECK ((jsonb_typeof(sequence_items) = 'array'::text));
 alter table public.zion_feedback add constraint zion_feedback_event_id_fkey FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE;
