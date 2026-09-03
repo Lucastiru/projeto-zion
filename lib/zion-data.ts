@@ -7,8 +7,8 @@ type Row = Record<string, any>;
 type Update<T> = T[] | ((previous: T[]) => T[]);
 type Codec<T> = { read: (row: Row) => T; write: (item: T, index: number) => Row };
 const eventsCodec: Codec<ChurchEvent> = {
-  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location }),
-  write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location }),
+  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '' }),
+  write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null }),
 };
 const momentsCodec: Codec<Moment> = {
   read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, done:r.completed }),

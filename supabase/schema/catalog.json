@@ -173,6 +173,18 @@
       "comment": null
     },
     {
+      "table": "zion_events",
+      "name": "notes_url",
+      "type": "text",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 8,
+      "collation": null,
+      "comment": "Endereço dos recados do culto no Drive. Somente http(s)."
+    },
+    {
       "table": "zion_feedback",
       "name": "event_id",
       "type": "uuid",
@@ -637,6 +649,12 @@
       "def": "CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'volunteer'::text])))"
     },
     {
+      "table": "zion_events",
+      "name": "zion_events_notes_url_check",
+      "type": "c",
+      "def": "CHECK (((notes_url IS NULL) OR (notes_url ~* '^https?://[^[:space:]]+$'::text)))"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_duration_minutes_check",
       "type": "c",
@@ -980,7 +998,7 @@
   "counts": [
     {
       "table": "zion_access",
-      "rows": 1
+      "rows": 2
     },
     {
       "table": "zion_events",
