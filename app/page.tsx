@@ -64,6 +64,7 @@ export type ChurchEvent = {
   title: string;
   type: string;
   location: string;
+  notes?: string;
 };
 export type Volunteer = {
   id: string | number;
@@ -84,6 +85,16 @@ const nav = [
   ['issues', 'Problemas', CircleAlert, 'Problemas'],
   ['report', 'Relatório', BarChart3, 'Números'],
 ] as const;
+// Um endereço vindo do formulário só vira link se for http(s): "javascript:..."
+// num href é código que roda no clique de quem confia na tela.
+function driveLink(value?: string) {
+  const address = (value || '').trim();
+  if (!address) return '';
+  try {
+    const parsed = new URL(address);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? address : '';
+  } catch { return ''; }
+}
 function safeDuration(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
@@ -113,7 +124,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [editing, setEditing] = useState<Moment | null>(null);
   const [prepEditing, setPrepEditing] = useState<PrepItem | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  const [eventOpen, setEventOpen] = useState(false);
+  const [eventOpen, setEventOpen] = useState<ChurchEvent | 'new' | null>(null);
   const [start] = [events.find((e) => e.id === selectedEvent)?.time ?? '19:45'];
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -182,18 +193,22 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   }
   async function saveEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!eventOpen) return;
     const f = new FormData(e.currentTarget);
+    const editing = eventOpen === 'new' ? null : eventOpen;
     const item = {
-      id: crypto.randomUUID(),
+      id: editing ? editing.id : crypto.randomUUID(),
       date: String(f.get('date')),
       time: String(f.get('time')),
       title: String(f.get('title')).trim(),
       type: String(f.get('type')),
       location: String(f.get('location')).trim(),
+      notes: String(f.get('notes') || '').trim(),
     };
-    if (!(await setEvents((v) => [...v, item]))) return;
+    const saved = await setEvents((v) => editing ? v.map(x => x.id === item.id ? item : x) : [...v, item]);
+    if (!saved) return;
     setSelectedEvent(item.id);
-    setEventOpen(false);
+    setEventOpen(null);
   }
   async function saveVolunteer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -324,6 +339,11 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                 {liveFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
               </button>
             )}
+            {driveLink(event?.notes) && view!=='settings' && view!=='users' && (
+              <a className="notes-chip" href={driveLink(event?.notes)} target="_blank" rel="noopener noreferrer">
+                <FileText size={14} /> Recados
+              </a>
+            )}
             {event && view!=='settings' && view!=='users' && <button className="ghost-btn" onClick={() => setView('schedule')}>Editar cronograma</button>}
             <div className="more-wrap">
               <button
@@ -359,6 +379,26 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                   >
                     Abrir relatório
                   </button>
+                  {event && (
+                    <button
+                      onClick={() => {
+                        setEventOpen(event);
+                        setMoreOpen(false);
+                      }}
+                    >
+                      Editar evento
+                    </button>
+                  )}
+                  {driveLink(event?.notes) && (
+                    <a
+                      href={driveLink(event?.notes)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      Abrir recados no Drive
+                    </a>
+                  )}
                 </div>
               )}
             </div>
@@ -536,7 +576,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                 setSelectedEvent(id);
                 setView('live');
               }}
-              open={() => setEventOpen(true)}
+              open={() => setEventOpen('new')}
             />
           )}{' '}
           {view === 'schedule' && (
@@ -601,7 +641,11 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
         <IssueModal close={() => setIssueOpen(false)} save={addIssue} />
       )}{' '}
       {eventOpen && (
-        <EventModal close={() => setEventOpen(false)} save={saveEvent} />
+        <EventModal
+          close={() => setEventOpen(null)}
+          save={saveEvent}
+          event={eventOpen === 'new' ? undefined : eventOpen}
+        />
       )}{' '}
       {volunteerEditing !== null && (
         <VolunteerModal
@@ -1321,9 +1365,11 @@ function PrepModal({
 function EventModal({
   close,
   save,
+  event,
 }: {
   close: () => void;
   save: (e: React.FormEvent<HTMLFormElement>) => void;
+  event?: ChurchEvent;
 }) {
   return (
     <div className="modal-backdrop">
@@ -1331,7 +1377,7 @@ function EventModal({
         <div className="modal-head">
           <div>
             <p className="eyebrow">CALENDÁRIO</p>
-            <h3>Novo evento</h3>
+            <h3>{event ? 'Editar evento' : 'Novo evento'}</h3>
           </div>
           <button type="button" onClick={close}>
             <X />
@@ -1339,22 +1385,22 @@ function EventModal({
         </div>
         <label>
           Nome do evento
-          <input name="title" required placeholder="Ex.: Culto Ekletos" />
+          <input name="title" required placeholder="Ex.: Culto Ekletos" defaultValue={event?.title} />
         </label>
         <div className="form-grid event-fields">
           <label>
             Data
-            <input name="date" type="date" required defaultValue={new Date().toLocaleDateString('en-CA')} />
+            <input name="date" type="date" required defaultValue={event?.date ?? new Date().toLocaleDateString('en-CA')} />
           </label>
           <label>
             Horário
-            <input name="time" type="time" required defaultValue="19:45" />
+            <input name="time" type="time" required defaultValue={event?.time ?? '19:45'} />
           </label>
         </div>
         <div className="form-grid">
           <label>
             Tipo
-            <select name="type">
+            <select name="type" defaultValue={event?.type}>
               <option>Culto</option>
               <option>Conferência</option>
               <option>Reunião</option>
@@ -1364,14 +1410,29 @@ function EventModal({
           </label>
           <label>
             Local
-            <input name="location" defaultValue="Auditório principal" />
+            <input name="location" defaultValue={event?.location ?? 'Auditório principal'} />
           </label>
         </div>
+        <label>
+          Recados no Drive{' '}
+          <small className="field-help">
+            Cole o endereço da pasta ou do documento. Quem abrir usa a própria
+            conta Google — a permissão continua sendo do Drive.
+          </small>
+          <input
+            name="notes"
+            type="url"
+            inputMode="url"
+            placeholder="https://drive.google.com/..."
+            pattern="https?://.+"
+            defaultValue={event?.notes}
+          />
+        </label>
         <div className="modal-actions">
           <button type="button" className="ghost-btn" onClick={close}>
             Cancelar
           </button>
-          <button className="primary-solid">Criar evento</button>
+          <button className="primary-solid">{event ? 'Salvar evento' : 'Criar evento'}</button>
         </div>
       </form>
     </div>
