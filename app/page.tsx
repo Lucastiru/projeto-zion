@@ -196,6 +196,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
     if (!eventOpen) return;
     const f = new FormData(e.currentTarget);
     const editing = eventOpen === 'new' ? null : eventOpen;
+    const notesField = f.get('notes');
     const item = {
       id: editing ? editing.id : crypto.randomUUID(),
       date: String(f.get('date')),
@@ -203,7 +204,8 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       title: String(f.get('title')).trim(),
       type: String(f.get('type')),
       location: String(f.get('location')).trim(),
-      notes: String(f.get('notes') || '').trim(),
+      // f.get devolve string ou File; só a string interessa aqui.
+      notes: (typeof notesField === 'string' ? notesField : '').trim(),
     };
     const saved = await setEvents((v) => editing ? v.map(x => x.id === item.id ? item : x) : [...v, item]);
     if (!saved) return;
