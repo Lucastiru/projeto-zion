@@ -74,6 +74,14 @@ create policy manager_write on public.zion_live_timer
 grant delete, insert, references, select, trigger, truncate, update on public.zion_live_timer to authenticated;
 grant delete, insert, references, select, trigger, truncate, update on public.zion_live_timer to service_role;
 
+-- O Supabase concede acesso a anon por padrão em tabela nova. Todas as outras
+-- tabelas do projeto revogam isso, e a regra é a mesma aqui: sem sessão não se
+-- lê nada. Hoje a RLS já barraria (não há política para anon), mas sem o revoke
+-- bastaria alguém criar uma política `to public` — ou desligar a RLS num
+-- diagnóstico — para a tabela abrir sozinha.
+revoke all on table public.zion_live_timer from anon;
+revoke all on function public.zion_live_timer_touch() from public, anon;
+
 -- Sem isto o Realtime não emite mudança desta tabela e as abas só se acertariam
 -- ao recarregar. É o que faz o play de um operador aparecer na tela do outro.
 do $$
