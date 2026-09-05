@@ -27,6 +27,12 @@
       "comment": null
     },
     {
+      "name": "zion_live_timer",
+      "rls": true,
+      "force_rls": false,
+      "comment": "Cronômetro ao vivo, uma linha por evento. Fonte da verdade compartilhada entre operadores e Modo TV."
+    },
+    {
       "name": "zion_moments",
       "rls": true,
       "force_rls": false,
@@ -289,6 +295,102 @@
       "generated": "",
       "default": "now()",
       "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "moment_id",
+      "type": "uuid",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "moment_position",
+      "type": "integer",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "0",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "running",
+      "type": "boolean",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "false",
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "ends_at",
+      "type": "timestamp with time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 5,
+      "collation": null,
+      "comment": "Alvo em hora do servidor enquanto o cronômetro corre. Nulo quando pausado."
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "remaining_seconds",
+      "type": "integer",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "0",
+      "attnum": 6,
+      "collation": null,
+      "comment": "Quanto falta quando pausado. Negativo quando o momento estourou o tempo."
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 7,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "updated_by",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 8,
       "collation": null,
       "comment": null
     },
@@ -607,6 +709,12 @@
       "def": "PRIMARY KEY (id)"
     },
     {
+      "table": "zion_live_timer",
+      "name": "zion_live_timer_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (event_id)"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_pkey",
       "type": "p",
@@ -679,6 +787,18 @@
       "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
     },
     {
+      "table": "zion_live_timer",
+      "name": "zion_live_timer_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "zion_live_timer_moment_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (moment_id) REFERENCES zion_moments(id) ON DELETE SET NULL"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_event_id_fkey",
       "type": "f",
@@ -740,11 +860,28 @@
     },
     {
       "schema": "public",
+      "name": "zion_live_timer_touch",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_live_timer_touch()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  new.updated_at := now();\n  return new;\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_now",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_now()\n RETURNS timestamp with time zone\n LANGUAGE sql\n STABLE\nAS $function$\n  select now()\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "zion_pending_users",
       "def": "CREATE OR REPLACE FUNCTION public.zion_pending_users()\n RETURNS TABLE(email text, name text, created_at timestamp with time zone, confirmed boolean)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select lower(u.email)::text,\n         coalesce(nullif(btrim(u.raw_user_meta_data ->> 'name'), ''), split_part(u.email, '@', 1))::text,\n         u.created_at,\n         u.email_confirmed_at is not null\n  from auth.users u\n  where public.zion_current_role() = 'admin'\n    and u.deleted_at is null\n    and not exists (select 1 from public.zion_access a where a.email = lower(u.email))\n  order by u.created_at\n$function$\n"
     }
   ],
-  "triggers": [],
+  "triggers": [
+    {
+      "schema": "public",
+      "table": "zion_live_timer",
+      "name": "zion_live_timer_touch",
+      "def": "CREATE TRIGGER zion_live_timer_touch BEFORE INSERT OR UPDATE ON public.zion_live_timer FOR EACH ROW EXECUTE FUNCTION zion_live_timer_touch()"
+    }
+  ],
   "platform_triggers": [
     {
       "schema": "storage",
@@ -833,6 +970,24 @@
     },
     {
       "table": "zion_issues",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_live_timer",
       "name": "member_read",
       "permissive": "PERMISSIVE",
       "roles": "{authenticated}",
@@ -955,6 +1110,16 @@
       "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
     },
     {
+      "table": "zion_live_timer",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_live_timer",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
       "table": "zion_moments",
       "grantee": "authenticated",
       "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
@@ -1010,6 +1175,10 @@
     },
     {
       "table": "zion_issues",
+      "rows": 0
+    },
+    {
+      "table": "zion_live_timer",
       "rows": 0
     },
     {
