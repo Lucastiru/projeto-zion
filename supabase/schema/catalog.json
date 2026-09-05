@@ -763,6 +763,12 @@
       "def": "CHECK (((notes_url IS NULL) OR (notes_url ~* '^https?://[^[:space:]]+$'::text)))"
     },
     {
+      "table": "zion_feedback",
+      "name": "zion_feedback_content_size_check",
+      "type": "c",
+      "def": "CHECK ((octet_length(content) <= 20000))"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_duration_minutes_check",
       "type": "c",
@@ -773,6 +779,12 @@
       "name": "zion_moments_sequence_items_check",
       "type": "c",
       "def": "CHECK ((jsonb_typeof(sequence_items) = 'array'::text))"
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "zion_volunteers_photo_url_size_check",
+      "type": "c",
+      "def": "CHECK (((photo_url IS NULL) OR (octet_length(photo_url) <= 700000)))"
     },
     {
       "table": "zion_feedback",
@@ -1072,7 +1084,7 @@
     {
       "table": "zion_access",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_access",
@@ -1082,7 +1094,7 @@
     {
       "table": "zion_events",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_events",
@@ -1092,7 +1104,7 @@
     {
       "table": "zion_feedback",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_feedback",
@@ -1102,7 +1114,7 @@
     {
       "table": "zion_issues",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_issues",
@@ -1112,7 +1124,7 @@
     {
       "table": "zion_live_timer",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_live_timer",
@@ -1122,7 +1134,7 @@
     {
       "table": "zion_moments",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_moments",
@@ -1132,7 +1144,7 @@
     {
       "table": "zion_preparation",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_preparation",
@@ -1142,7 +1154,7 @@
     {
       "table": "zion_roster",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_roster",
@@ -1152,7 +1164,7 @@
     {
       "table": "zion_volunteers",
       "grantee": "authenticated",
-      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
     },
     {
       "table": "zion_volunteers",

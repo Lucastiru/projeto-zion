@@ -71,7 +71,7 @@ create policy manager_write on public.zion_live_timer
   using ((zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text])))
   with check ((zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text])));
 
-grant delete, insert, references, select, trigger, truncate, update on public.zion_live_timer to authenticated;
+grant delete, insert, select, update on public.zion_live_timer to authenticated;
 grant delete, insert, references, select, trigger, truncate, update on public.zion_live_timer to service_role;
 
 -- O Supabase concede acesso a anon por padrão em tabela nova. Todas as outras
