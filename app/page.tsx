@@ -5,6 +5,8 @@ import { AccountPanel } from '@/components/zion-account';
 import { UsersPanel, SettingsPanel } from '@/components/zion-users';
 import { useZionData } from '@/lib/zion-data';
 import { supabase } from '@/lib/supabase';
+import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
+import { useLiveTimer } from '@/lib/zion-timer';
 import type { Session } from '@supabase/supabase-js';
 import {
   AlertTriangle,
@@ -30,6 +32,7 @@ import {
   Settings,
   ShieldCheck,
   Trash2,
+  Tv,
   Users,
   X,
 } from 'lucide-react';
@@ -111,16 +114,16 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [selectedEvent,setSelectedEvent] = useState<string | number>('');
   const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,status,loading,report} = useZionData(selectedEvent);
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
-  useEffect(() => { setRunning(false); setCurrent(0); setSeconds(0); },[selectedEvent]);
   const [view, setView] = useState('calendar');
   const displayName = session.user.user_metadata?.name || 'Meu perfil';
   const initials = session.user.user_metadata?.name ? String(session.user.user_metadata.name).trim().split(/\s+/).map(part=>part[0]).slice(0,2).join('').toUpperCase() : 'EU';
   const event = events.find(e=>e.id===selectedEvent);
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
-  const [current, setCurrent] = useState(0);
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-  useEffect(() => { if (!running) setSeconds((moments[current]?.duration || 0)*60); },[selectedEvent,moments[current]?.id]);
+  // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
+  const canDrive = role === 'admin' || role === 'manager';
+  const { current, seconds, running, driver, toggle, goTo, stop } = useLiveTimer({
+    event: selectedEvent, moments, can: canDrive, who: displayName, report,
+  });
   const [editing, setEditing] = useState<Moment | null>(null);
   const [prepEditing, setPrepEditing] = useState<PrepItem | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
@@ -133,11 +136,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [liveFullscreen, setLiveFullscreen] = useState(false);
-  useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [running]);
+  const [tvOpen, setTvOpen] = useState(false);
   const timings = useMemo(() => {
     let sum = 0;
     return moments.map((m) => {
@@ -151,6 +150,16 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const prepared = prep.filter((x) => x.done).length;
   const active = timings[current] ?? timings[0];
   const next = timings[current + 1];
+  // O Modo TV é alimentado por esta transmissão: o operador continua sendo o
+  // dono do cronômetro e a televisão só repete o que ele fizer. Quem só tem
+  // leitura não transmite, para duas telas não disputarem o mesmo canal.
+  const tvState = useMemo(
+    () => (event && active && canDrive
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running }
+      : null),
+    [event, active, seconds, running, canDrive],
+  );
+  useTvBroadcast(tvState ? String(selectedEvent) : '', tvState);
   async function saveMoment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -238,14 +247,8 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       ms.map((m, i) => (i === current ? { ...m, done: true } : m)),
     );
     if (!saved) return;
-    setRunning(false);
-    if (current < moments.length - 1) {
-      setCurrent(current + 1);
-      setSeconds(safeDuration(moments[current + 1].duration) * 60);
-    } else {
-      setSeconds(0);
-      setView('report');
-    }
+    if (current < moments.length - 1) goTo(current + 1);
+    else { stop(); setView('report'); }
   }
   async function addIssue(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -339,6 +342,11 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               >
                 <Maximize2 size={14} />{' '}
                 {liveFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+              </button>
+            )}
+            {view === 'live' && event && (
+              <button className="ghost-btn" onClick={() => setTvOpen(true)}>
+                <Tv size={14} /> Modo TV
               </button>
             )}
             {driveLink(event?.notes) && view!=='settings' && view!=='users' && (
@@ -439,25 +447,25 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                           </ol>
                         ) : null}
                       </div>
-                      <div className="timer">
-                        <strong>
-                          {String(Math.floor(seconds / 60)).padStart(2, '0')}:
-                          {String(seconds % 60).padStart(2, '0')}
-                        </strong>
-                        <span>de {active.duration}:00</span>
+                      <div className={`timer ${seconds < 0 ? 'over' : ''}`}>
+                        <strong>{clock(seconds)}</strong>
+                        <span>
+                          {seconds < 0 ? 'passou do tempo' : `de ${active.duration}:00`}
+                        </span>
                       </div>
                     </div>
                     <div className="progress">
                       <i
                         style={{
-                          width: `${100 - (seconds / (active.duration * 60)) * 100}%`,
+                          width: `${Math.min(100, Math.max(0, 100 - (seconds / (active.duration * 60)) * 100))}%`,
                         }}
                       />
                     </div>
                     <div className="live-actions">
                       <button
                         className="primary-btn"
-                        onClick={() => setRunning(!running)}
+                        onClick={toggle}
+                        disabled={!canDrive}
                       >
                         {running ? (
                           <Pause size={16} fill="currentColor" />
@@ -466,7 +474,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         )}
                         {running ? 'Pausar' : 'Iniciar cronômetro'}
                       </button>
-                      <button className="secondary-btn" onClick={complete}>
+                      <button className="secondary-btn" onClick={complete} disabled={!canDrive}>
                         Concluir momento
                       </button>
                       <button
@@ -476,6 +484,13 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <AlertTriangle size={15} /> Registrar problema
                       </button>
                     </div>
+                    {(driver || !canDrive) && (
+                      <p className="live-driver">
+                        {canDrive
+                          ? `Último comando: ${driver}`
+                          : `Somente acompanhando${driver ? ` • quem comanda é ${driver}` : ''}`}
+                      </p>
+                    )}
                   </div>
                   <div className="section-heading">
                     <div>
@@ -514,7 +529,8 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         </div>
                         <button
                           className="row-btn"
-                          onClick={() => { setRunning(false); setCurrent(i); setSeconds(item.duration*60); }}
+                          onClick={() => goTo(i)}
+                          disabled={!canDrive}
                         >
                           <ChevronRight size={17} />
                         </button>
@@ -656,8 +672,65 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           save={saveVolunteer}
         />
       )}{' '}
-      {profileOpen && <AccountPanel session={session} role={role} close={() => setProfileOpen(false)} />}
+      {profileOpen && <AccountPanel session={session} role={role} close={() => setProfileOpen(false)} />}{' '}
+      {tvOpen && event && <TvModal event={selectedEvent} close={() => setTvOpen(false)} />}
     </main>
+  );
+}
+
+// O Modo TV entrega um endereço aberto: a televisão não faz login e não lê o
+// banco, ela só escuta o cronômetro do operador. É a alternativa a amarrar o
+// tempo no ProPresenter — dá para usar um ou outro.
+function TvModal({ event, close }: { event: string | number; close: () => void }) {
+  const link = useTvLink(event);
+  const [copied, setCopied] = useState('');
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied('Link copiado.');
+    } catch {
+      setCopied('Copie o endereço acima na mão.');
+    }
+  }
+  return (
+    <div className="modal-backdrop" onClick={close}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <p className="eyebrow">OPERAÇÃO AO VIVO</p>
+            <h3>Modo TV</h3>
+          </div>
+          <button type="button" onClick={close}>
+            <X />
+          </button>
+        </div>
+        <p className="tv-modal-text">
+          Abra este endereço na televisão. O cronômetro grande acompanha o que
+          você fizer aqui: iniciar, pausar e trocar de momento.
+        </p>
+        <label>
+          Endereço da televisão
+          <input readOnly value={link} onFocus={e => e.currentTarget.select()} />
+        </label>
+        <p className="user-note">
+          A tela não pede login e mostra só o momento e o tempo. Quem abrir o
+          endereço vê o cronômetro, então trate o link como interno da equipe.
+        </p>
+        {copied && <p role="status" className="tv-modal-text">{copied}</p>}
+        <div className="modal-actions">
+          <button type="button" className="ghost-btn" onClick={copy}>
+            Copiar link
+          </button>
+          <button
+            type="button"
+            className="primary-solid"
+            onClick={() => window.open(link, '_blank', 'noopener')}
+          >
+            Abrir a televisão
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

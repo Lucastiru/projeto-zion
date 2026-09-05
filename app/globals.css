@@ -106,3 +106,50 @@
   .access-person strong{overflow-wrap:anywhere}
   .access-actions{justify-content:flex-start;margin-top:10px}
 }
+
+/* O cronômetro é o que a equipe procura na tela, então ele passa a ser o maior
+   elemento do cartão. Vem depois das regras antigas de propósito: estas mandam
+   nos tamanhos, inclusive dentro das faixas de celular declaradas acima. */
+.timer strong{font-size:clamp(52px,6vw,74px);letter-spacing:-.03em;font-weight:800}
+.timer span{font-size:11px}
+.timer.over strong{color:#ff9d86}
+.timer.over span{color:#ff9d86;font-weight:700}
+.live-fullscreen .timer strong{font-size:clamp(96px,13vw,196px)}
+.live-fullscreen .timer span{font-size:14px}
+@media(max-width:620px){
+  .timer strong{font-size:clamp(56px,17vw,74px)}
+  .live-fullscreen .timer strong{font-size:clamp(72px,22vw,120px)}
+}
+.tv-modal-text{font-size:11px;color:#63706a;line-height:1.6}
+
+/* Modo TV: a televisão fica longe de quem lê, então a tela tem uma informação
+   principal — o tempo — e nada em que se possa clicar por engano. */
+.tv{min-height:100dvh;background:#0d2a22;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:4vh 5vw;text-align:center;overflow:hidden;transition:background .4s}
+.tv-over{background:#4a1512}
+.tv-head{position:fixed;inset:0 0 auto 0;display:flex;align-items:center;gap:12px;padding:18px 22px;font-size:13px;color:#9fc0b4}
+.tv-event{font-weight:700;letter-spacing:.02em;color:#dbeae4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-signal{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.tv-signal i{width:9px;height:9px;border-radius:50%;background:#c9743f}
+.tv-signal.on i{background:#d7f261}
+.tv-expand{border:0;background:transparent;color:#7fa294;cursor:pointer;padding:4px;opacity:.5}
+.tv-expand:hover{opacity:1}
+.tv-now p{margin:0;font-size:clamp(28px,4.4vw,64px);font-weight:760;line-height:1.1;letter-spacing:-.02em}
+.tv-now span{font-size:clamp(14px,1.6vw,24px);color:#9fc0b4}
+.tv-over .tv-now span{color:#f0b3a6}
+.tv-clock{font-family:var(--font-geist-mono),ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:min(30vw,46vh);line-height:.95;font-weight:700;letter-spacing:-.04em;color:#fff}
+.tv-over .tv-clock{color:#ffd7cd;animation:tv-pulse 2s ease-in-out infinite}
+@keyframes tv-pulse{50%{opacity:.55}}
+.tv-scale{font-size:clamp(13px,1.5vw,22px);letter-spacing:.14em;text-transform:uppercase;color:#8fb3a6}
+.tv-over .tv-scale{color:#f3bdb1;font-weight:700}
+.tv-progress{width:min(1100px,86vw);height:10px;margin-top:2vh;border-radius:6px;background:#ffffff1f;overflow:hidden}
+.tv-progress i{display:block;height:100%;border-radius:6px;background:var(--lime);transition:width .5s linear}
+.tv-over .tv-progress i{background:#ff9d86}
+.tv-empty{display:grid;gap:12px;max-width:620px}
+.tv-empty strong{font-size:clamp(26px,3.4vw,44px)}
+.tv-empty span{font-size:clamp(13px,1.5vw,19px);color:#9fc0b4;line-height:1.6}
+@media(prefers-reduced-motion:reduce){.tv-over .tv-clock{animation:none}}
+/* Com mais de uma pessoa na operação, a tela diz de quem foi o último comando —
+   é a diferença entre "travou" e "o outro operador pausou". */
+.live-driver{margin:14px 0 0;font-size:10px;letter-spacing:.04em;color:#8fb3a6}
+.live-actions button:disabled{opacity:.45;cursor:not-allowed}
+.row-btn:disabled{opacity:.3;cursor:not-allowed}
