@@ -116,13 +116,16 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
   const [view, setView] = useState('calendar');
   const displayName = session.user.user_metadata?.name || 'Meu perfil';
+  // "Meu perfil" é rótulo de menu, não nome de gente: no cronômetro compartilhado
+  // quem aparece é quem mexeu, e sem nome cadastrado o e-mail já identifica.
+  const myName = String(session.user.user_metadata?.name || session.user.email || '').trim();
   const initials = session.user.user_metadata?.name ? String(session.user.user_metadata.name).trim().split(/\s+/).map(part=>part[0]).slice(0,2).join('').toUpperCase() : 'EU';
   const event = events.find(e=>e.id===selectedEvent);
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
   const { current, seconds, running, driver, toggle, goTo, stop } = useLiveTimer({
-    event: selectedEvent, moments, can: canDrive, who: displayName, report,
+    event: selectedEvent, moments, can: canDrive, who: myName, report,
   });
   const [editing, setEditing] = useState<Moment | null>(null);
   const [prepEditing, setPrepEditing] = useState<PrepItem | null>(null);
