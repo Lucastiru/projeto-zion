@@ -4,6 +4,7 @@ import { ZionAuth } from '@/components/zion-auth';
 import { AccountPanel } from '@/components/zion-account';
 import { UsersPanel, SettingsPanel } from '@/components/zion-users';
 import { useZionData } from '@/lib/zion-data';
+import { downloadSchedulePdf } from '@/lib/zion-pdf';
 import { supabase } from '@/lib/supabase';
 import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
 import { useLiveTimer } from '@/lib/zion-timer';
@@ -602,6 +603,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           )}{' '}
           {view === 'schedule' && (
             <ScheduleView
+              event={event}
               timings={timings}
               total={total}
               start={start}
@@ -850,12 +852,14 @@ function CalendarView({
   );
 }
 function ScheduleView({
+  event,
   timings,
   total,
   start,
   setEditing,
   setMoments,
 }: {
+  event?: ChurchEvent;
   timings: (Moment & { time: string; end: string })[];
   total: number;
   start: string;
@@ -873,6 +877,9 @@ function ScheduleView({
           </p>
         </div>
         <div className="view-actions">
+          <button className="ghost-btn" disabled={!event || !timings.length} onClick={() => event && void downloadSchedulePdf(event, timings, total)}>
+            <FileText size={15} /> Baixar PDF
+          </button>
           <button className="ghost-btn">
             <FileText size={15} /> Duplicar último culto
           </button>
