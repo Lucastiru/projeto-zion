@@ -114,6 +114,13 @@
 .timer span{font-size:11px}
 .timer.over strong{color:#ff9d86}
 .timer.over span{color:#ff9d86;font-weight:700}
+.live-sequence-checklist li{display:flex;align-items:center;gap:8px;transition:opacity .2s ease}
+.live-sequence-checklist li>button{width:24px;height:24px;flex:0 0 24px;border:1px solid #ffffff45;border-radius:50%;display:grid;place-items:center;background:#ffffff12;color:#fff;cursor:pointer;padding:0;font-size:10px;font-weight:800}
+.live-sequence-checklist li>button:hover:not(:disabled){background:#ffffff25;border-color:#ffffff80}
+.live-sequence-checklist li>button:disabled{cursor:default}
+.live-sequence-checklist li.completed{opacity:.58}
+.live-sequence-checklist li.completed>span{text-decoration:line-through}
+.live-sequence-checklist li.completed>button{background:var(--lime);border-color:var(--lime);color:#15382d}
 .live-fullscreen .timer strong{font-size:clamp(96px,13vw,196px)}
 .live-fullscreen .timer span{font-size:14px}
 @media(max-width:620px){

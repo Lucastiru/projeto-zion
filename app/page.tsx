@@ -45,6 +45,7 @@ export type Moment = {
   owner: string;
   details: string;
   items?: string[];
+  completedItems?: number[];
   done?: boolean;
 };
 export type Issue = {
@@ -254,6 +255,16 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
     if (current < moments.length - 1) goTo(current + 1);
     else { stop(); setView('report'); }
   }
+  async function toggleSequenceItem(index: number) {
+    if (!active || !canDrive) return;
+    await setMoments((ms) => ms.map((moment) => {
+      if (moment.id !== active.id) return moment;
+      const completed = new Set(moment.completedItems || []);
+      if (completed.has(index)) completed.delete(index);
+      else completed.add(index);
+      return { ...moment, completedItems: [...completed].sort((a, b) => a - b) };
+    }));
+  }
   async function addIssue(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -441,11 +452,19 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <h2>{active.owner}</h2>
                         <span>{active.details}</span>
                         {active.items?.length ? (
-                          <ol className="live-sequence">
+                          <ol className="live-sequence live-sequence-checklist">
                             {active.items.map((item, i) => (
-                              <li key={`${item}-${i}`}>
-                                <b>{i + 1}</b>
-                                {item}
+                              <li key={`${item}-${i}`} className={active.completedItems?.includes(i) ? 'completed' : ''}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSequenceItem(i)}
+                                  disabled={!canDrive}
+                                  aria-label={`${active.completedItems?.includes(i) ? 'Desmarcar' : 'Marcar'} ${item} como concluída`}
+                                  aria-pressed={active.completedItems?.includes(i) || false}
+                                >
+                                  {active.completedItems?.includes(i) ? <Check size={13} /> : <span>{i + 1}</span>}
+                                </button>
+                                <span>{item}</span>
                               </li>
                             ))}
                           </ol>

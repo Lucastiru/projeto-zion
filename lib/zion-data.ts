@@ -11,8 +11,8 @@ const eventsCodec: Codec<ChurchEvent> = {
   write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null }),
 };
 const momentsCodec: Codec<Moment> = {
-  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, done:r.completed }),
-  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed:!!r.done, position:i }),
+  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], done:r.completed }),
+  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed_item_indexes:r.completedItems || [], completed:!!r.done, position:i }),
 };
 const prepCodec: Codec<PrepItem> = {
   read: r => ({ id:r.id, team:r.team, text:r.description, assigned:r.assigned_to || '', done:r.completed }),
@@ -48,6 +48,20 @@ function useRows<T extends {id: string | number}>(table: string, codec: Codec<T>
     });
     return () => { alive = false; };
   }, [table, event, codec, report]);
+  // Mudanças feitas por outro operador aparecem sem recarregar a página. Para
+  // a lista de músicas, isto mantém celular, computador e cabine na mesma etapa.
+  useEffect(() => {
+    if (event === '' || event === undefined) return;
+    const channel = supabase
+      .channel(`zion-rows-${table}-${event}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `event_id=eq.${event}` }, payload => {
+        const updated = codec.read(payload.new as Row);
+        current.current = current.current.map(item => item.id === updated.id ? updated : item);
+        render(current.current);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [table, event, codec]);
   const change = async (update: Update<T>): Promise<boolean> => {
     const target = event;
     let success = false;
