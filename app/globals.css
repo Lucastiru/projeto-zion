@@ -160,3 +160,12 @@
 .timer-nudge button:disabled{opacity:.35;cursor:not-allowed}
 .live-fullscreen .timer-nudge button{font-size:13px;padding:8px 14px}
 @media(max-width:620px){.timer-nudge{justify-content:flex-start}}
+/* Modo TV num celular em pé: o nome do evento é o que encolhe; o sinal
+   (Ao vivo / Pausado / Aguardando) fica inteiro numa linha só. */
+.tv-event{flex:1;min-width:0}
+.tv-signal{flex:none;white-space:nowrap}
+@media(max-width:620px){
+  .tv-head{padding:12px 14px;gap:8px;font-size:12px}
+  .tv-head img{width:28px;height:28px}
+  .tv-signal{font-size:10px}
+}
