@@ -14,6 +14,10 @@ export type TvState = {
   duration: number; // minutos previstos para o momento
   seconds: number; // quanto falta; negativo quando o momento estourou
   running: boolean;
+  // Carimbo do último comando. Muda a cada toque no banco (play, pausa,
+  // ajuste de minuto), o que dispara um envio imediato mesmo com o cronômetro
+  // correndo — sem ele, um "-1 min" só chegaria à TV no próximo pulso.
+  stamp?: string;
 };
 
 const channelFor = (event: string) => `zion-tv-${event}`;
