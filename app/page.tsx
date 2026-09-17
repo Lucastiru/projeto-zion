@@ -125,7 +125,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
-  const { current, seconds, running, driver, toggle, goTo, stop } = useLiveTimer({
+  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp } = useLiveTimer({
     event: selectedEvent, moments, can: canDrive, who: myName, report,
   });
   const [editing, setEditing] = useState<Moment | null>(null);
@@ -159,9 +159,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   // leitura não transmite, para duas telas não disputarem o mesmo canal.
   const tvState = useMemo(
     () => (event && active && canDrive
-      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running }
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp }
       : null),
-    [event, active, seconds, running, canDrive],
+    [event, active, seconds, running, stamp, canDrive],
   );
   useTvBroadcast(tvState ? String(selectedEvent) : '', tvState);
   async function saveMoment(e: React.FormEvent<HTMLFormElement>) {
@@ -456,6 +456,10 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <span>
                           {seconds < 0 ? 'passou do tempo' : `de ${active.duration}:00`}
                         </span>
+                        <div className="timer-nudge">
+                          <button type="button" onClick={() => nudge(-60)} disabled={!canDrive} title="Tirar um minuto (soltou tarde)">−1 min</button>
+                          <button type="button" onClick={() => nudge(60)} disabled={!canDrive} title="Devolver um minuto">+1 min</button>
+                        </div>
                       </div>
                     </div>
                     <div className="progress">

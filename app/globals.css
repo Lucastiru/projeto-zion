@@ -153,3 +153,10 @@
 .live-driver{margin:14px 0 0;font-size:10px;letter-spacing:.04em;color:#8fb3a6}
 .live-actions button:disabled{opacity:.45;cursor:not-allowed}
 .row-btn:disabled{opacity:.3;cursor:not-allowed}
+/* Ajuste fino do tempo: soltou tarde, tira um minuto; passou, devolve. */
+.timer-nudge{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+.timer-nudge button{border:1px solid #3d6a5b;background:#ffffff0f;color:#d8e7e1;border-radius:7px;padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+.timer-nudge button:hover:not(:disabled){background:#ffffff1f}
+.timer-nudge button:disabled{opacity:.35;cursor:not-allowed}
+.live-fullscreen .timer-nudge button{font-size:13px;padding:8px 14px}
+@media(max-width:620px){.timer-nudge{justify-content:flex-start}}

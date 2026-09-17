@@ -106,5 +106,11 @@ export function useLiveTimer({ event, moments, can, who, report }: {
     toggle: () => write(current, seconds, !running),
     goTo: (position: number) => write(position, minutes(moments[position]?.duration) * 60, false),
     stop: () => write(current, 0, false),
+    // Soltou tarde? Tira um minuto. Passou da conta? Devolve. Vale correndo ou
+    // parado: a escrita recalcula o alvo a partir do que sobrou.
+    nudge: (delta: number) => write(current, seconds + delta, running),
+    // Carimbo do último toque no banco. Quem transmite para a TV usa isto para
+    // mandar o pacote na hora em que algo muda, sem esperar o pulso.
+    stamp: row?.updated_at || '',
   };
 }
