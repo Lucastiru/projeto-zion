@@ -83,6 +83,11 @@ export type Volunteer = {
   email: string;
   scheduled: boolean;
   photo?: string;
+  // Link pessoal (/escala?v=) e a resposta dele na escala do evento aberto.
+  token?: string;
+  status?: 'pendente' | 'confirmado' | 'recusado';
+  reason?: string;
+  invitedAt?: string | null;
 };
 // O quarto item é o rótulo curto, usado na barra inferior do celular.
 const nav = [
@@ -111,7 +116,7 @@ function safeDuration(value: number) {
 export default function Home() { return <ZionAuth>{(session,role) => <ZionWorkspace session={session} role={role}/>}</ZionAuth>; }
 function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [selectedEvent,setSelectedEvent] = useState<string | number>('');
-  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,status,loading,report} = useZionData(selectedEvent);
+  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,markInvited,reloadRoster,status,loading,report} = useZionData(selectedEvent);
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
   const [view, setView] = useState('calendar');
   const displayName = session.user.user_metadata?.name || 'Meu perfil';
@@ -697,6 +702,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               volunteers={volunteers}
               setVolunteers={setVolunteers}
               edit={setVolunteerEditing}
+              event={event}
+              markInvited={markInvited}
+              reload={reloadRoster}
             />
           )}{' '}
           {view === 'issues' && (
@@ -1181,16 +1189,53 @@ function PrepView({
     </div>
   );
 }
+// Telefone do cadastro vira número do wa.me: só dígitos, com 55 na frente
+// quando veio só DDD + número. Sem telefone, o WhatsApp abre para escolher o
+// contato — o recado vai pronto do mesmo jeito.
+function whatsappTo(phone: string, text: string) {
+  const digits = phone.replace(/\D/g, '');
+  const number = digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+}
+const SEAT_LABEL = { pendente: 'Sem resposta', confirmado: 'Confirmou', recusado: 'Não pode' } as const;
 function VolunteersView({
   volunteers,
   setVolunteers,
   edit,
+  event,
+  markInvited,
+  reload,
 }: {
   volunteers: Volunteer[];
   setVolunteers: React.Dispatch<React.SetStateAction<Volunteer[]>>;
   edit: (v: Volunteer) => void;
+  event?: ChurchEvent;
+  markInvited: (id: string | number) => Promise<void>;
+  reload: () => void;
 }) {
   const teams = [...new Set(volunteers.map((v) => v.team))];
+  const scheduled = volunteers.filter(v => v.scheduled);
+  // Quem avisou pelo link que não pode servir no dia deste evento.
+  const [blocked, setBlocked] = useState<string[]>([]);
+  useEffect(() => {
+    let alive = true;
+    if (event?.date) void supabase.from('zion_volunteer_blocks').select('volunteer_id').eq('day', event.date).then(({ data }) => {
+      if (alive) setBlocked((data || []).map(x => String(x.volunteer_id)));
+    });
+    return () => { alive = false; };
+  }, [event?.date]);
+  const [copied, setCopied] = useState('');
+  const linkOf = (v: Volunteer) => `${window.location.origin}/escala?v=${v.token}`;
+  function invite(v: Volunteer) {
+    if (!event) return;
+    const first = v.name.trim().split(/\s+/)[0];
+    const text = `Oi, ${first}! Você está na escala do ${event.title} em ${event.date.split('-').reverse().slice(0, 2).join('/')} às ${event.time}. Consegue confirmar por aqui? ${linkOf(v)}`;
+    window.open(whatsappTo(v.phone, text), '_blank', 'noopener');
+    void markInvited(v.id);
+  }
+  async function copyLink(v: Volunteer) {
+    try { await navigator.clipboard.writeText(linkOf(v)); setCopied(String(v.id)); } catch { setCopied(''); }
+  }
   return (
     <div className="surface">
       <div className="view-head">
@@ -1219,9 +1264,17 @@ function VolunteersView({
       </div>
       <div className="roster-summary">
         <div>
-          <strong>{volunteers.filter((v) => v.scheduled).length}</strong>
-          <span>na escala de hoje</span>
+          <strong>{scheduled.length}</strong>
+          <span>na escala{event ? ` de ${event.date.split('-').reverse().slice(0, 2).join('/')}` : ''}</span>
         </div>
+        {scheduled.length > 0 && (
+          <div className="roster-answers">
+            <span className="seat confirmado">{scheduled.filter(v => v.status === 'confirmado').length} confirmaram</span>
+            <span className="seat pendente">{scheduled.filter(v => v.status === 'pendente').length} sem resposta</span>
+            <span className="seat recusado">{scheduled.filter(v => v.status === 'recusado').length} não podem</span>
+            <button type="button" className="ghost-btn" onClick={reload}>Atualizar respostas</button>
+          </div>
+        )}
         <div className="roster-chips">
           {teams.map((t) => (
             <span key={t}>
@@ -1250,6 +1303,24 @@ function VolunteersView({
               <span>
                 {v.team} • {v.email}
               </span>
+              {blocked.includes(String(v.id)) && <em className="seat-block">Avisou que não pode neste dia</em>}
+              {v.scheduled && v.status && (
+                <em className={`seat ${v.status}`} title={v.reason || undefined}>
+                  {SEAT_LABEL[v.status]}
+                  {v.status === 'recusado' && v.reason ? `: ${v.reason}` : ''}
+                  {v.status === 'pendente' && v.invitedAt ? ' · convite enviado' : ''}
+                </em>
+              )}
+              {v.scheduled && (
+                <span className="seat-actions">
+                  <button type="button" onClick={() => invite(v)} disabled={!event}>
+                    {v.invitedAt ? 'Lembrar no WhatsApp' : 'Convidar no WhatsApp'}
+                  </button>
+                  <button type="button" onClick={() => void copyLink(v)}>
+                    {copied === String(v.id) ? 'Link copiado' : 'Copiar link'}
+                  </button>
+                </span>
+              )}
             </div>
             <button className="edit-volunteer" onClick={() => edit(v)}>
               <Pencil size={14} /> Editar

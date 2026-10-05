@@ -23,7 +23,7 @@ const issuesCodec: Codec<Issue> = {
   write: r => ({ id:r.id, area:r.type, description:r.description, resolved:r.status === 'Resolvido' }),
 };
 const volunteersCodec: Codec<Volunteer> = {
-  read: r => ({ id:r.id, name:r.name, email:r.email, team:r.team, phone:r.phone, photo:r.photo_url || undefined, scheduled:false }),
+  read: r => ({ id:r.id, name:r.name, email:r.email, team:r.team, phone:r.phone, photo:r.photo_url || undefined, token:r.portal_token, scheduled:false }),
   write: r => ({ id:r.id, name:r.name, email:r.email.trim().toLowerCase(), team:r.team, phone:r.phone, photo_url:r.photo || null }),
 };
 
@@ -110,19 +110,37 @@ export function useZionData(event: string | number) {
   const moments = useRows('zion_moments',momentsCodec,event,report);
   const prep = useRows('zion_preparation',prepCodec,event,report);
   const issues = useRows('zion_issues',issuesCodec,event,report);
-  const [roster,setRoster] = useState<string[]>([]);
+  // A escala traz a resposta de cada um: quem confirmou, quem recusou e por
+  // quê, e se o convite já saiu. `reload` busca de novo — o voluntário responde
+  // pelo link dele, fora desta tela.
+  type Seat = { volunteer_id: string; status: 'pendente' | 'confirmado' | 'recusado'; decline_reason: string; invited_at: string | null };
+  const [seats,setSeats] = useState<Seat[]>([]);
+  const roster = seats.map(x => x.volunteer_id);
+  const setRoster = (ids: string[]) => setSeats(previous => ids.map(id => previous.find(x => x.volunteer_id === id) ?? { volunteer_id: id, status: 'pendente', decline_reason: '', invited_at: null }));
   const [rosterLoading,setRosterLoading] = useState(false);
+  const [rosterVersion,setRosterVersion] = useState(0);
   useEffect(() => {
-    let alive = true; setRoster([]); setRosterLoading(!!event);
-    if (event) supabase.from('zion_roster').select('volunteer_id').eq('event_id',event).then(({data,error}) => {
+    let alive = true; setSeats([]); setRosterLoading(!!event);
+    if (event) supabase.from('zion_roster').select('volunteer_id,status,decline_reason,invited_at').eq('event_id',event).then(({data,error}) => {
       if (!alive) return;
       setRosterLoading(false);
       if (error) report('Falha ao carregar escala: ' + error.message);
-      else setRoster((data || []).map(x => x.volunteer_id));
+      else setSeats((data || []) as Seat[]);
     });
     return () => { alive = false; };
-  },[event,report]);
-  const visibleVolunteers = volunteers.rows.map(v => ({...v,scheduled:roster.includes(String(v.id))}));
+  },[event,report,rosterVersion]);
+  const visibleVolunteers = volunteers.rows.map(v => {
+    const seat = seats.find(x => x.volunteer_id === String(v.id));
+    return { ...v, scheduled: !!seat, status: seat?.status, reason: seat?.decline_reason || '', invitedAt: seat?.invited_at || null };
+  });
+  // Carimba que o convite saiu: o líder vê quem já foi chamado e quem falta.
+  async function markInvited(volunteerId: string | number) {
+    if (!event) return;
+    const at = new Date().toISOString();
+    const { error } = await supabase.from('zion_roster').update({ invited_at: at }).eq('event_id', event).eq('volunteer_id', volunteerId);
+    if (error) report('Convite aberto, mas não ficou registrado: ' + error.message);
+    else setSeats(previous => previous.map(x => (x.volunteer_id === String(volunteerId) ? { ...x, invited_at: at } : x)));
+  }
   async function setVolunteers(update: Update<Volunteer>) {
     const next = typeof update === 'function' ? update(visibleVolunteers) : update;
     if (!(await volunteers.change(next))) return false;
@@ -136,7 +154,7 @@ export function useZionData(event: string | number) {
     }
     if (eventRef.current === event) setRoster(next.filter(x => x.scheduled).map(x => String(x.id))); return true;
   }
-  return { events:events.rows,setEvents:events.change,volunteers:visibleVolunteers,setVolunteers,
+  return { events:events.rows,setEvents:events.change,volunteers:visibleVolunteers,setVolunteers,markInvited,reloadRoster:() => setRosterVersion(n => n + 1),
     moments:moments.rows,setMoments:moments.change,prep:prep.rows,setPrep:prep.change,issues:issues.rows,setIssues:issues.change,
     status,report,loading:events.loading || volunteers.loading || moments.loading || prep.loading || issues.loading || rosterLoading };
 }
