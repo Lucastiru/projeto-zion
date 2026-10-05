@@ -22,6 +22,8 @@ export type TvState = {
   // minutos — positivo é atraso. Quem está no palco decide se estica ou corta.
   finish?: string;
   offset?: number;
+  // Recado do operador para quem está no palco. Vazio = nada na tela.
+  message?: string;
 };
 
 const channelFor = (event: string) => `zion-tv-${event}`;

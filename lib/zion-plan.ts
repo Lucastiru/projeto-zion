@@ -64,3 +64,48 @@ export function project(planned: Planned[], slots: Slot[], current: number, now:
 // Amarelo antes do vermelho: momento curto avisa no último minuto, momento de
 // dez minutos ou mais avisa nos dois últimos.
 export const warnSeconds = (durationMinutes: number) => (durationMinutes >= 10 ? 120 : 60);
+
+// Papel × realidade, momento a momento, para o relatório pós-culto. Tudo em
+// minutos desde a meia-noite; momento sem registro fica sem número — nunca
+// com um número inventado.
+export type Run = { start: number; end: number | null };
+export type Compared = {
+  plannedStart: number;
+  plannedDuration: number;
+  realStart: number | null;
+  realDuration: number | null;
+  startDelta: number | null; // + = começou depois do papel
+  durationDelta: number | null; // + = durou mais que o papel
+};
+
+export function compare(planned: Planned[], runs: (Run | undefined)[]): {
+  rows: Compared[];
+  startDelta: number | null; // início do culto: primeiro momento que rodou
+  endDelta: number | null; // fim do culto: último momento concluído
+  onTime: number; // momentos concluídos que não passaram mais de 1 min do papel
+  measured: number; // momentos concluídos com início registrado
+} {
+  const rows = planned.map((p, i) => {
+    const run = runs[i];
+    const realDuration = run && run.end !== null ? run.end - run.start : null;
+    return {
+      plannedStart: p.start,
+      plannedDuration: p.end - p.start,
+      realStart: run ? run.start : null,
+      realDuration,
+      startDelta: run ? run.start - p.start : null,
+      durationDelta: realDuration === null ? null : realDuration - (p.end - p.start),
+    };
+  });
+  const first = rows.findIndex(r => r.realStart !== null);
+  let last = -1;
+  rows.forEach((r, i) => { if (r.realDuration !== null) last = i; });
+  const finished = rows.filter(r => r.durationDelta !== null);
+  return {
+    rows,
+    startDelta: first < 0 ? null : rows[first].startDelta,
+    endDelta: last < 0 ? null : (runs[last] as Run).end! - planned[last].end,
+    onTime: finished.filter(r => (r.durationDelta as number) <= 1).length,
+    measured: finished.length,
+  };
+}

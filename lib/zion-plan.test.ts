@@ -1,4 +1,4 @@
-import { plan, project, clockOf } from './zion-plan.ts';
+import { plan, project, clockOf, compare } from './zion-plan.ts';
 let fail = 0; const eq = (name: string, got: unknown, want: unknown) => { const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) fail++; console.log(ok ? 'ok  ' : 'FAIL', name, ok ? '' : `got ${JSON.stringify(got)} want ${JSON.stringify(want)}`); };
 // Worship Night 01/10: 10,5,3,40,10,15,15,10,7 a partir de 19:45 → 21:40
 const wn = [10,5,3,40,10,15,15,10,7].map(d => ({ duration: d }));
@@ -30,4 +30,14 @@ eq('estourado: fim do momento = agora', clockOf(est.expected[3].end), '20:50');
 // Adiantado
 const adi = project(p, wn, 3, 20*60+3, 30);
 eq('adiantado 10 min', Math.round(adi.offset), -10);
+// Relatório: abertura começou 19:49 (+4), countdown no tempo, abertura do Hiro estourou 2 min
+const r = compare(p.slice(0,3), [{ start: 19*60+49, end: 19*60+59 }, { start: 19*60+59, end: 20*60+4 }, { start: 20*60+4, end: 20*60+9 }]);
+eq('culto começou 4 min atrasado', r.startDelta, 4);
+eq('terminou 6 min depois do papel (20:09 × 20:03)', r.endDelta, 6);
+eq('abertura durou 5 em vez de 3', r.rows[2].durationDelta, 2);
+eq('2 de 3 no tempo', [r.onTime, r.measured], [2, 3]);
+// Momento que nunca rodou não ganha número
+const semPlay = compare(p.slice(0,2), [{ start: 19*60+45, end: 19*60+55 }, undefined]);
+eq('momento sem registro fica nulo', [semPlay.rows[1].realStart, semPlay.rows[1].durationDelta], [null, null]);
+eq('em andamento não conta como medido', compare(p.slice(0,1), [{ start: 19*60+45, end: null }]).measured, 0);
 if (fail) throw new Error(`${fail} teste(s) falharam`);

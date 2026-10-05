@@ -8,7 +8,7 @@ import { downloadSchedulePdf } from '@/lib/zion-pdf';
 import { supabase } from '@/lib/supabase';
 import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
 import { useLiveTimer } from '@/lib/zion-timer';
-import { clockOf, plan, project, warnSeconds } from '@/lib/zion-plan';
+import { clockOf, compare, plan, project, warnSeconds, type Planned } from '@/lib/zion-plan';
 import type { Session } from '@supabase/supabase-js';
 import {
   AlertTriangle,
@@ -123,7 +123,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
-  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp, started, now } = useLiveTimer({
+  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp, started, now, message, say } = useLiveTimer({
     event: selectedEvent, moments, can: canDrive, who: myName, report,
   });
   const [editing, setEditing] = useState<Moment | null>(null);
@@ -165,9 +165,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   // leitura não transmite, para duas telas não disputarem o mesmo canal.
   const tvState = useMemo(
     () => (event && active && canDrive
-      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset }
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset, message }
       : null),
-    [event, active, seconds, running, stamp, canDrive, finish, offset],
+    [event, active, seconds, running, stamp, canDrive, finish, offset, message],
   );
   useTvBroadcast(tvState ? String(selectedEvent) : '', tvState);
   async function saveMoment(e: React.FormEvent<HTMLFormElement>) {
@@ -544,6 +544,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <AlertTriangle size={15} /> Registrar problema
                       </button>
                     </div>
+                    {canDrive && <StageMessage current={message} send={say} />}
                     {(driver || !canDrive) && (
                       <p className="live-driver">
                         {canDrive
@@ -709,6 +710,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
             <ReportView
               eventId={selectedEvent}
               moments={moments}
+              planned={planned}
               timings={timings}
               issues={issues}
               prepared={prepared}
@@ -753,6 +755,40 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       {profileOpen && <AccountPanel session={session} role={role} close={() => setProfileOpen(false)} />}{' '}
       {tvOpen && event && <TvModal event={selectedEvent} close={() => setTvOpen(false)} />}
     </main>
+  );
+}
+
+// Recado para o palco, como no StageTimer: o pregador não ouve o operador, mas
+// lê a TV. Os atalhos são os recados de todo culto; o resto se digita.
+const STAGE_SHORTCUTS = ['5 minutos', '2 minutos', 'Encerrar', 'Pode estender'];
+function StageMessage({ current, send }: { current: string; send: (text: string) => Promise<void> }) {
+  const [draft, setDraft] = useState('');
+  return (
+    <div className="stage-message">
+      <div className="stage-message-head">
+        <span>Mensagem para o palco</span>
+        {current && (
+          <button type="button" className="stage-clear" onClick={() => void send('')}>
+            Tirar da tela
+          </button>
+        )}
+      </div>
+      {current && <p className="stage-current">No palco agora: <b>{current}</b></p>}
+      <div className="stage-shortcuts">
+        {STAGE_SHORTCUTS.map(text => (
+          <button type="button" key={text} onClick={() => void send(text)} className={current === text ? 'active' : ''}>
+            {text}
+          </button>
+        ))}
+      </div>
+      <form
+        className="stage-form"
+        onSubmit={e => { e.preventDefault(); if (draft.trim()) { void send(draft); setDraft(''); } }}
+      >
+        <input value={draft} onChange={e => setDraft(e.target.value)} maxLength={120} placeholder="Escreva um recado curto…" />
+        <button type="submit" disabled={!draft.trim()}>Enviar</button>
+      </form>
+    </div>
   );
 }
 
@@ -1325,6 +1361,7 @@ function IssuesView({
 function ReportView({
   eventId,
   moments,
+  planned,
   timings,
   issues,
   prepared,
@@ -1332,6 +1369,7 @@ function ReportView({
 }: {
   eventId: string | number;
   moments: Moment[];
+  planned: Planned[];
   timings: (Moment & { time: string; end: string })[];
   issues: Issue[];
   prepared: number;
@@ -1340,6 +1378,42 @@ function ReportView({
   const [feedback,setFeedback] = useState('');
   const [notice,setNotice] = useState('');
   useEffect(() => { let alive=true; setFeedback(''); if(eventId) supabase.from('zion_feedback').select('content').eq('event_id',eventId).maybeSingle().then(({data,error})=>{ if(alive) { if(error) setNotice(error.message); else setFeedback(data?.content || ''); } }); return()=>{alive=false}; },[eventId]);
+  // O que aconteceu de verdade: início no primeiro play, fim na conclusão,
+  // carimbados pelo banco (zion_moment_runs). Sem registro, sem número.
+  const [runs, setRuns] = useState<{ moment_id: string; started_at: string; ended_at: string | null }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    if (eventId) void supabase.from('zion_moment_runs').select('moment_id,started_at,ended_at').eq('event_id', eventId).then(({ data, error }) => {
+      if (!alive) return;
+      if (error) setNotice('Não foi possível ler os horários reais: ' + error.message);
+      else setRuns(data || []);
+    });
+    return () => { alive = false; };
+  }, [eventId]);
+  const minuteOf = (iso: string) => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
+  const real = compare(planned, moments.map(m => {
+    const run = runs.find(x => x.moment_id === String(m.id));
+    return run ? { start: minuteOf(run.started_at), end: run.ended_at ? minuteOf(run.ended_at) : null } : undefined;
+  }));
+  const signed = (n: number | null) => (n === null ? '—' : Math.abs(Math.round(n)) < 1 ? 'no tempo' : `${n > 0 ? '+' : '−'}${Math.abs(Math.round(n))} min`);
+  const verdict = real.startDelta === null
+    ? 'Sem registro'
+    : real.endDelta === null
+      ? `Começou ${signed(real.startDelta) === 'no tempo' ? 'no horário' : signed(real.startDelta)}`
+      : Math.abs(real.endDelta) < 1 ? 'Terminou no horário' : real.endDelta > 0 ? `Terminou ${Math.round(real.endDelta)} min atrasado` : `Terminou ${Math.round(-real.endDelta)} min adiantado`;
+  function exportCsv() {
+    const header = ['Momento', 'Responsável', 'Início no papel', 'Início real', 'Diferença no início', 'Duração no papel (min)', 'Duração real (min)', 'Diferença na duração'];
+    const lines = moments.map((m, i) => {
+      const r = real.rows[i];
+      return [m.title, m.owner, clockOf(r.plannedStart), r.realStart === null ? '' : clockOf(r.realStart), signed(r.startDelta), r.plannedDuration, r.realDuration === null ? '' : Math.round(r.realDuration), signed(r.durationDelta)];
+    });
+    const csv = [header, ...lines].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+    link.download = 'relatorio-culto.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
   async function saveFeedback(){ if(!eventId)return; const {error}=await supabase.from('zion_feedback').upsert({event_id:eventId,content:feedback,updated_at:new Date().toISOString()}).select().single(); setNotice(error ? 'Não foi possível salvar: '+error.message : 'Feedback salvo.'); }
   return (
     <div className="surface">
@@ -1349,19 +1423,51 @@ function ReportView({
           <h2>Relatório da operação</h2>
           <p>Resumo automático para a liderança.</p>
         </div>
-        <button className="primary-solid">
-          <FileText size={16} /> Exportar relatório
+        <button className="primary-solid" onClick={exportCsv} disabled={!moments.length}>
+          <FileText size={16} /> Baixar planilha (CSV)
         </button>
       </div>
       <div className="report-hero">
         <div>
           <span>Pontualidade</span>
-          <strong>No horário</strong>
-          <small>Início 19:45 • Término previsto {timings.at(-1)?.end}</small>
+          <strong>{verdict}</strong>
+          <small>
+            No papel: {timings[0]?.time ?? '—'} → {timings.at(-1)?.end ?? '—'}
+            {real.startDelta !== null ? ` • Início real ${signed(real.startDelta)}` : ''}
+          </small>
         </div>
         <div className="score">
-          92<small>/100</small>
+          {real.measured ? (
+            <>
+              {real.onTime}
+              <small>/{real.measured} no tempo</small>
+            </>
+          ) : (
+            <small>sem medição</small>
+          )}
         </div>
+      </div>
+      <div className="report-table-scroll">
+        <table className="report-table">
+          <thead>
+            <tr><th>Momento</th><th>Papel</th><th>Real</th><th>Início</th><th>Duração</th></tr>
+          </thead>
+          <tbody>
+            {moments.map((m, i) => {
+              const r = real.rows[i];
+              const tone = (n: number | null) => (n === null || Math.abs(n) < 1 ? '' : n > 0 ? 'late' : 'early');
+              return (
+                <tr key={m.id}>
+                  <td><strong>{m.title}</strong><small>{m.owner}</small></td>
+                  <td>{clockOf(r.plannedStart)} · {r.plannedDuration} min</td>
+                  <td>{r.realStart === null ? <em>não rodou</em> : `${clockOf(r.realStart)} · ${r.realDuration === null ? 'sem conclusão' : `${Math.round(r.realDuration)} min`}`}</td>
+                  <td className={tone(r.startDelta)}>{signed(r.startDelta)}</td>
+                  <td className={tone(r.durationDelta)}>{signed(r.durationDelta)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
       <div className="metrics four">
         <div>

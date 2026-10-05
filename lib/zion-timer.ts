@@ -13,6 +13,8 @@ type Row = {
   remaining_seconds: number;
   updated_at: string;
   updated_by: string;
+  stage_message?: string;
+  stage_message_at?: string | null;
 };
 
 const minutes = (value?: number) => (Number.isFinite(value) && (value as number) > 0 ? (value as number) : 1);
@@ -114,6 +116,19 @@ export function useLiveTimer({ event, moments, can, who, report }: {
     // Carimbo do último toque no banco. Quem transmite para a TV usa isto para
     // mandar o pacote na hora em que algo muda, sem esperar o pulso.
     stamp: row?.updated_at || '',
+    message: row?.stage_message || '',
+    // Manda (ou limpa, com texto vazio) a mensagem do palco. É escrita à parte
+    // do cronômetro: o upsert só toca estas colunas, então um play logo depois
+    // não apaga o que está no palco, nem a mensagem mexe no "Último comando".
+    say: async (text: string) => {
+      if (!can || !event) return;
+      const payload = { event_id: String(event), stage_message: text.trim().slice(0, 120), stage_message_at: new Date(serverNow()).toISOString() };
+      // Sem linha ainda (mensagem antes do primeiro play), quem desenha é o
+      // Realtime trazendo a linha recém-criada.
+      setHeld(previous => (previous.row ? { event: String(event), row: { ...previous.row, ...payload } } : previous));
+      const { error } = await supabase.from('zion_live_timer').upsert(payload).select().single();
+      if (error) report('Não foi possível mandar a mensagem para o palco: ' + error.message);
+    },
     // O culto começou quando alguém deu o primeiro comando. Antes disso, o
     // horário que vale é o do papel.
     started: live,
