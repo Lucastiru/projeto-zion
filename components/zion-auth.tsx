@@ -28,8 +28,18 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
     if (!session) return;
     supabase.rpc('zion_current_role').then(({ data, error }) => {
       if (!alive) return;
-      setRole(data || 'denied');
-      if (error) setMessage('Não foi possível verificar seu acesso: ' + error.message);
+      if (data) {
+        setRole(data);
+        try { localStorage.setItem(`zion:offline-role:${session.user.id}`, data); } catch {}
+      } else if (error && !navigator.onLine) {
+        let cached = '';
+        try { cached = localStorage.getItem(`zion:offline-role:${session.user.id}`) || ''; } catch {}
+        setRole(cached || 'denied');
+        setMessage(cached ? 'Sem internet. Você está vendo a última versão salva neste aparelho.' : 'Conecte-se à internet para verificar seu acesso.');
+      } else {
+        setRole('denied');
+        if (error) setMessage('Não foi possível verificar seu acesso: ' + error.message);
+      }
     });
     return () => { alive = false; };
   }, [session?.user.id]);

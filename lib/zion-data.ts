@@ -6,6 +6,19 @@ import type { Moment, Issue, PrepItem, ChurchEvent, Volunteer, Ministry } from '
 type Row = Record<string, any>;
 type Update<T> = T[] | ((previous: T[]) => T[]);
 type Codec<T> = { read: (row: Row) => T; write: (item: T, index: number) => Row };
+const offlineTables = new Set(['zion_events', 'zion_moments']);
+function offlineKey(table: string, event: string | number | undefined) {
+  return `zion:offline:${table}:${event ?? 'all'}`;
+}
+function readOffline<T>(table: string, event: string | number | undefined): T[] {
+  if (!offlineTables.has(table)) return [];
+  try { return JSON.parse(localStorage.getItem(offlineKey(table, event)) || '[]') as T[]; }
+  catch { return []; }
+}
+function writeOffline<T>(table: string, event: string | number | undefined, rows: T[]) {
+  if (!offlineTables.has(table)) return;
+  try { localStorage.setItem(offlineKey(table, event), JSON.stringify(rows)); } catch {}
+}
 const eventsCodec: Codec<ChurchEvent> = {
   read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '', ministryId:r.ministry_id || '' }),
   write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null, ministry_id:r.ministryId || null }),
@@ -47,8 +60,16 @@ function useRows<T extends {id: string | number}>(table: string, codec: Codec<T>
     query.then(({ data, error }) => {
       if (!alive) return;
       setLoading(false);
-      if (error) { report('Falha ao carregar: ' + error.message); return; }
+      if (error) {
+        const cached = readOffline<T>(table, event);
+        if (!navigator.onLine && cached.length) {
+          current.current = cached; render(cached);
+          report('Sem internet — mostrando o último cronograma salvo neste aparelho.');
+        } else report('Falha ao carregar: ' + error.message);
+        return;
+      }
       current.current = (data || []).map(codec.read); render(current.current);
+      writeOffline(table, event, current.current);
     });
     return () => { alive = false; };
   }, [table, event, codec, report]);
@@ -62,6 +83,7 @@ function useRows<T extends {id: string | number}>(table: string, codec: Codec<T>
         const updated = codec.read(payload.new as Row);
         current.current = current.current.map(item => item.id === updated.id ? updated : item);
         render(current.current);
+        writeOffline(table, event, current.current);
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
@@ -93,7 +115,7 @@ function useRows<T extends {id: string | number}>(table: string, codec: Codec<T>
         for (const item of before.filter(x => !after.some(y => x.id === y.id))) {
           const {error} = await supabase.from(table).delete().eq('id',item.id).select().single(); if (error) throw error;
         }
-        if (scope.current === target) { current.current = after; render(after); }
+        if (scope.current === target) { current.current = after; render(after); writeOffline(table, target, after); }
         report('Salvo no Supabase'); success = true;
       } catch (error) {
         report('Não foi possível salvar. Reabra a tela antes de tentar novamente. ' + (error instanceof Error ? error.message : (error as Row)?.message || 'Verifique sua conexão e permissão.'));
