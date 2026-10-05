@@ -195,3 +195,22 @@
 .tv-warn .tv-progress i{background:#ffd166}
 .tv-finish{font-size:clamp(13px,1.5vw,22px);color:#9fc0b4;letter-spacing:.04em}
 .tv-finish.late{color:#ffc9a8}
+/* Mensagem para o palco: o operador fala com quem está no microfone pela TV. */
+.stage-message{margin-top:16px;padding-top:14px;border-top:1px solid #ffffff1a;display:grid;gap:8px}
+.stage-message-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9cb2aa}
+.stage-clear{border:0;background:transparent;color:#ffc9a8;font-size:10px;cursor:pointer;text-transform:none;letter-spacing:0}
+.stage-current{margin:0;font-size:11px;color:#d8e7e1}
+.stage-current b{color:var(--lime)}
+.stage-shortcuts{display:flex;flex-wrap:wrap;gap:6px}
+.stage-shortcuts button,.stage-form button{border:1px solid #3d6a5b;background:#ffffff0f;color:#d8e7e1;border-radius:7px;padding:6px 10px;font-size:11px;cursor:pointer}
+.stage-shortcuts button.active{background:var(--lime);color:#17382e;border-color:var(--lime);font-weight:700}
+.stage-form{display:flex;gap:6px}
+.stage-form input{flex:1;min-width:0;border:1px solid #3d6a5b;background:#0f2e25;color:#fff;border-radius:7px;padding:7px 9px;font-size:12px}
+.stage-form button:disabled{opacity:.4;cursor:not-allowed}
+.tv-message{display:block;max-width:90vw;margin-bottom:1vh;padding:.4em 1em;border-radius:14px;background:var(--lime);color:#10261e;font-size:clamp(26px,5vw,72px);font-weight:800;line-height:1.1;text-align:center;box-shadow:0 10px 40px #0007;animation:tv-flash 1s ease-in-out 3}
+@keyframes tv-flash{50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.tv-message{animation:none}}
+/* O cabeçalho da TV é fixo: o conteúdo centralizado reserva a altura dele, e
+   com recado na tela o relógio cede espaço para nada se sobrepor. */
+.tv{padding-top:max(76px,4vh)}
+.tv-has-message .tv-clock{font-size:min(24vw,36vh)}

@@ -123,7 +123,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
-  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp, started, now } = useLiveTimer({
+  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp, started, now, message, say } = useLiveTimer({
     event: selectedEvent, moments, can: canDrive, who: myName, report,
   });
   const [editing, setEditing] = useState<Moment | null>(null);
@@ -165,9 +165,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   // leitura não transmite, para duas telas não disputarem o mesmo canal.
   const tvState = useMemo(
     () => (event && active && canDrive
-      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset }
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset, message }
       : null),
-    [event, active, seconds, running, stamp, canDrive, finish, offset],
+    [event, active, seconds, running, stamp, canDrive, finish, offset, message],
   );
   useTvBroadcast(tvState ? String(selectedEvent) : '', tvState);
   async function saveMoment(e: React.FormEvent<HTMLFormElement>) {
@@ -544,6 +544,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <AlertTriangle size={15} /> Registrar problema
                       </button>
                     </div>
+                    {canDrive && <StageMessage current={message} send={say} />}
                     {(driver || !canDrive) && (
                       <p className="live-driver">
                         {canDrive
@@ -753,6 +754,40 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       {profileOpen && <AccountPanel session={session} role={role} close={() => setProfileOpen(false)} />}{' '}
       {tvOpen && event && <TvModal event={selectedEvent} close={() => setTvOpen(false)} />}
     </main>
+  );
+}
+
+// Recado para o palco, como no StageTimer: o pregador não ouve o operador, mas
+// lê a TV. Os atalhos são os recados de todo culto; o resto se digita.
+const STAGE_SHORTCUTS = ['5 minutos', '2 minutos', 'Encerrar', 'Pode estender'];
+function StageMessage({ current, send }: { current: string; send: (text: string) => Promise<void> }) {
+  const [draft, setDraft] = useState('');
+  return (
+    <div className="stage-message">
+      <div className="stage-message-head">
+        <span>Mensagem para o palco</span>
+        {current && (
+          <button type="button" className="stage-clear" onClick={() => void send('')}>
+            Tirar da tela
+          </button>
+        )}
+      </div>
+      {current && <p className="stage-current">No palco agora: <b>{current}</b></p>}
+      <div className="stage-shortcuts">
+        {STAGE_SHORTCUTS.map(text => (
+          <button type="button" key={text} onClick={() => void send(text)} className={current === text ? 'active' : ''}>
+            {text}
+          </button>
+        ))}
+      </div>
+      <form
+        className="stage-form"
+        onSubmit={e => { e.preventDefault(); if (draft.trim()) { void send(draft); setDraft(''); } }}
+      >
+        <input value={draft} onChange={e => setDraft(e.target.value)} maxLength={120} placeholder="Escreva um recado curto…" />
+        <button type="submit" disabled={!draft.trim()}>Enviar</button>
+      </form>
+    </div>
   );
 }
 
