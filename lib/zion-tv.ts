@@ -18,6 +18,10 @@ export type TvState = {
   // ajuste de minuto), o que dispara um envio imediato mesmo com o cronômetro
   // correndo — sem ele, um "-1 min" só chegaria à TV no próximo pulso.
   stamp?: string;
+  // Término esperado do culto (HH:MM) e quanto ele se afasta do papel, em
+  // minutos — positivo é atraso. Quem está no palco decide se estica ou corta.
+  finish?: string;
+  offset?: number;
 };
 
 const channelFor = (event: string) => `zion-tv-${event}`;
