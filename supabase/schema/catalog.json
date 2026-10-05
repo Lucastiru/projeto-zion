@@ -33,6 +33,12 @@
       "comment": "Cronômetro ao vivo, uma linha por evento. Fonte da verdade compartilhada entre operadores e Modo TV."
     },
     {
+      "name": "zion_ministries",
+      "rls": true,
+      "force_rls": false,
+      "comment": "Ministérios da igreja (Eklektos, ...). Identidade visual dos eventos: nome, cor, logo."
+    },
+    {
       "name": "zion_moment_runs",
       "rls": true,
       "force_rls": false,
@@ -201,6 +207,18 @@
       "attnum": 8,
       "collation": null,
       "comment": "Endereço dos recados do culto no Drive. Somente http(s)."
+    },
+    {
+      "table": "zion_events",
+      "name": "ministry_id",
+      "type": "uuid",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 9,
+      "collation": null,
+      "comment": "Ministério do evento. Nulo = Zion Church. Apagar o ministério devolve o evento para Zion Church."
     },
     {
       "table": "zion_feedback",
@@ -427,6 +445,66 @@
       "generated": "",
       "default": null,
       "attnum": 10,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "name",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "color",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'#15382d'::text",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "logo_url",
+      "type": "text",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 5,
       "collation": null,
       "comment": null
     },
@@ -907,6 +985,12 @@
       "def": "PRIMARY KEY (event_id)"
     },
     {
+      "table": "zion_ministries",
+      "name": "zion_ministries_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
       "table": "zion_moment_runs",
       "name": "zion_moment_runs_pkey",
       "type": "p",
@@ -979,6 +1063,24 @@
       "def": "CHECK ((char_length(stage_message) <= 120))"
     },
     {
+      "table": "zion_ministries",
+      "name": "zion_ministries_color_check",
+      "type": "c",
+      "def": "CHECK ((color ~ '^#[0-9a-fA-F]{6}$'::text))"
+    },
+    {
+      "table": "zion_ministries",
+      "name": "zion_ministries_logo_check",
+      "type": "c",
+      "def": "CHECK (((logo_url IS NULL) OR ((logo_url ~ '^data:image/(png|jpeg);base64,'::text) AND (char_length(logo_url) <= 420000))))"
+    },
+    {
+      "table": "zion_ministries",
+      "name": "zion_ministries_name_check",
+      "type": "c",
+      "def": "CHECK (((char_length(btrim(name)) >= 1) AND (char_length(btrim(name)) <= 60)))"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_completed_item_indexes_check",
       "type": "c",
@@ -1013,6 +1115,12 @@
       "name": "zion_volunteers_photo_url_size_check",
       "type": "c",
       "def": "CHECK (((photo_url IS NULL) OR (octet_length(photo_url) <= 700000)))"
+    },
+    {
+      "table": "zion_events",
+      "name": "zion_events_ministry_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (ministry_id) REFERENCES zion_ministries(id) ON DELETE SET NULL"
     },
     {
       "table": "zion_feedback",
@@ -1149,7 +1257,7 @@
     {
       "schema": "public",
       "name": "zion_portal",
-      "def": "CREATE OR REPLACE FUNCTION public.zion_portal(p_token uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select jsonb_build_object(\n    'name', v.name,\n    'team', v.team,\n    'schedule', coalesce((\n      select jsonb_agg(jsonb_build_object(\n               'event_id', e.id, 'title', e.title, 'date', e.event_date,\n               'time', to_char(e.start_time, 'HH24:MI'), 'location', e.location,\n               'status', r.status, 'reason', r.decline_reason)\n             order by e.event_date, e.start_time)\n        from public.zion_roster r\n        join public.zion_events e on e.id = r.event_id\n       where r.volunteer_id = v.id and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1), '[]'::jsonb),\n    'blocks', coalesce((\n      select jsonb_agg(b.day order by b.day)\n        from public.zion_volunteer_blocks b\n       where b.volunteer_id = v.id and b.day >= (now() at time zone 'America/Sao_Paulo')::date), '[]'::jsonb))\n  from public.zion_volunteers v\n  where v.portal_token = p_token\n$function$\n"
+      "def": "CREATE OR REPLACE FUNCTION public.zion_portal(p_token uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select jsonb_build_object(\n    'name', v.name,\n    'team', v.team,\n    'schedule', coalesce((\n      select jsonb_agg(jsonb_build_object(\n               'event_id', e.id, 'title', e.title, 'date', e.event_date,\n               'time', to_char(e.start_time, 'HH24:MI'), 'location', e.location,\n               'status', r.status, 'reason', r.decline_reason, 'ministry_id', e.ministry_id)\n             order by e.event_date, e.start_time)\n        from public.zion_roster r\n        join public.zion_events e on e.id = r.event_id\n       where r.volunteer_id = v.id\n         and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1), '[]'::jsonb),\n    'ministries', coalesce((\n      select jsonb_object_agg(m.id, jsonb_build_object('name', m.name, 'color', m.color, 'logo', m.logo_url))\n        from public.zion_ministries m\n       where m.id in (\n         select e.ministry_id from public.zion_roster r\n           join public.zion_events e on e.id = r.event_id\n          where r.volunteer_id = v.id\n            and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1)), '{}'::jsonb),\n    'blocks', coalesce((\n      select jsonb_agg(b.day order by b.day)\n        from public.zion_volunteer_blocks b\n       where b.volunteer_id = v.id\n         and b.day >= (now() at time zone 'America/Sao_Paulo')::date), '[]'::jsonb))\n  from public.zion_volunteers v\n  where v.portal_token = p_token\n$function$\n"
     },
     {
       "schema": "public",
@@ -1160,6 +1268,11 @@
       "schema": "public",
       "name": "zion_portal_respond",
       "def": "CREATE OR REPLACE FUNCTION public.zion_portal_respond(p_token uuid, p_event uuid, p_status text, p_reason text DEFAULT ''::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_id uuid;\nbegin\n  if p_status not in ('confirmado', 'recusado') then\n    raise exception 'Resposta inválida';\n  end if;\n  select id into v_id from public.zion_volunteers where portal_token = p_token;\n  if v_id is null then\n    raise exception 'Link inválido';\n  end if;\n  update public.zion_roster r\n     set status = p_status,\n         decline_reason = case when p_status = 'recusado' then left(coalesce(btrim(p_reason), ''), 200) else '' end,\n         responded_at = now()\n    from public.zion_events e\n   where r.volunteer_id = v_id and r.event_id = p_event\n     and e.id = r.event_id and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date;\n  if not found then\n    raise exception 'Escala não encontrada ou já passou';\n  end if;\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_tv_identity",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_tv_identity(p_event uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select jsonb_build_object('name', m.name, 'color', m.color, 'logo', m.logo_url)\n    from public.zion_events e\n    join public.zion_ministries m on m.id = e.ministry_id\n   where e.id = p_event\n$function$\n"
     }
   ],
   "triggers": [
@@ -1288,6 +1401,24 @@
     },
     {
       "table": "zion_live_timer",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_ministries",
+      "name": "admin_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = 'admin'::text)",
+      "with_check": "(zion_current_role() = 'admin'::text)"
+    },
+    {
+      "table": "zion_ministries",
       "name": "member_read",
       "permissive": "PERMISSIVE",
       "roles": "{authenticated}",
@@ -1456,6 +1587,16 @@
       "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
     },
     {
+      "table": "zion_ministries",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
+    },
+    {
+      "table": "zion_ministries",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
       "table": "zion_moment_runs",
       "grantee": "authenticated",
       "privileges": "DELETE, INSERT, SELECT, UPDATE"
@@ -1536,6 +1677,10 @@
     {
       "table": "zion_live_timer",
       "rows": 4
+    },
+    {
+      "table": "zion_ministries",
+      "rows": 0
     },
     {
       "table": "zion_moment_runs",
