@@ -176,3 +176,7 @@
   .tv-head img{width:28px;height:28px}
   .tv-signal{font-size:10px}
 }
+/* Novo evento a partir de um anterior: o caminho de toda semana. */
+.copy-source{display:grid;gap:8px;margin-top:4px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f7faf8}
+.copy-source .copy-check{display:flex!important;align-items:center;gap:8px;font-weight:500}
+.copy-source .copy-check input{width:auto}
