@@ -33,6 +33,12 @@
       "comment": "Cronômetro ao vivo, uma linha por evento. Fonte da verdade compartilhada entre operadores e Modo TV."
     },
     {
+      "name": "zion_moment_runs",
+      "rls": true,
+      "force_rls": false,
+      "comment": "Início (primeiro play) e fim (conclusão) reais de cada momento. Preenchida por gatilhos."
+    },
+    {
       "name": "zion_moments",
       "rls": true,
       "force_rls": false,
@@ -49,6 +55,12 @@
       "rls": true,
       "force_rls": false,
       "comment": null
+    },
+    {
+      "name": "zion_volunteer_blocks",
+      "rls": true,
+      "force_rls": false,
+      "comment": "Dias em que o voluntário avisou que não pode servir. Ele mesmo marca pelo link pessoal."
     },
     {
       "name": "zion_volunteers",
@@ -395,6 +407,78 @@
       "comment": null
     },
     {
+      "table": "zion_live_timer",
+      "name": "stage_message",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 9,
+      "collation": null,
+      "comment": "Texto que o operador manda para a tela do palco. Vazio = sem mensagem."
+    },
+    {
+      "table": "zion_live_timer",
+      "name": "stage_message_at",
+      "type": "timestamp with time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 10,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "event_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "moment_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "now()",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "ended_at",
+      "type": "timestamp with time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
       "table": "zion_moments",
       "name": "id",
       "type": "uuid",
@@ -503,6 +587,30 @@
       "comment": null
     },
     {
+      "table": "zion_moments",
+      "name": "completed_item_indexes",
+      "type": "integer[]",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'{}'::integer[]",
+      "attnum": 10,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_moments",
+      "name": "hard_start",
+      "type": "time without time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 11,
+      "collation": null,
+      "comment": "Hora de relógio em que o momento tem de começar. Nulo = começa quando o anterior acabar."
+    },
+    {
       "table": "zion_preparation",
       "name": "id",
       "type": "uuid",
@@ -599,6 +707,78 @@
       "comment": null
     },
     {
+      "table": "zion_roster",
+      "name": "status",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "'pendente'::text",
+      "attnum": 3,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "decline_reason",
+      "type": "text",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "''::text",
+      "attnum": 4,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "responded_at",
+      "type": "timestamp with time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 5,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_roster",
+      "name": "invited_at",
+      "type": "timestamp with time zone",
+      "notnull": false,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 6,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "name": "volunteer_id",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 1,
+      "collation": null,
+      "comment": null
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "name": "day",
+      "type": "date",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": null,
+      "attnum": 2,
+      "collation": null,
+      "comment": null
+    },
+    {
       "table": "zion_volunteers",
       "name": "id",
       "type": "uuid",
@@ -681,6 +861,18 @@
       "attnum": 7,
       "collation": null,
       "comment": null
+    },
+    {
+      "table": "zion_volunteers",
+      "name": "portal_token",
+      "type": "uuid",
+      "notnull": true,
+      "identity": "",
+      "generated": "",
+      "default": "gen_random_uuid()",
+      "attnum": 8,
+      "collation": null,
+      "comment": "Credencial do link pessoal /escala?v=. Quem tiver o link responde pela pessoa."
     }
   ],
   "constraints": [
@@ -715,6 +907,12 @@
       "def": "PRIMARY KEY (event_id)"
     },
     {
+      "table": "zion_moment_runs",
+      "name": "zion_moment_runs_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (event_id, moment_id)"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_pkey",
       "type": "p",
@@ -731,6 +929,12 @@
       "name": "zion_roster_pkey",
       "type": "p",
       "def": "PRIMARY KEY (event_id, volunteer_id)"
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "name": "zion_volunteer_blocks_pkey",
+      "type": "p",
+      "def": "PRIMARY KEY (volunteer_id, day)"
     },
     {
       "table": "zion_volunteers",
@@ -769,6 +973,18 @@
       "def": "CHECK ((octet_length(content) <= 20000))"
     },
     {
+      "table": "zion_live_timer",
+      "name": "zion_live_timer_stage_message_check",
+      "type": "c",
+      "def": "CHECK ((char_length(stage_message) <= 120))"
+    },
+    {
+      "table": "zion_moments",
+      "name": "zion_moments_completed_item_indexes_check",
+      "type": "c",
+      "def": "CHECK ((0 <= ALL (completed_item_indexes)))"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_duration_minutes_check",
       "type": "c",
@@ -779,6 +995,18 @@
       "name": "zion_moments_sequence_items_check",
       "type": "c",
       "def": "CHECK ((jsonb_typeof(sequence_items) = 'array'::text))"
+    },
+    {
+      "table": "zion_roster",
+      "name": "zion_roster_decline_reason_check",
+      "type": "c",
+      "def": "CHECK ((char_length(decline_reason) <= 200))"
+    },
+    {
+      "table": "zion_roster",
+      "name": "zion_roster_status_check",
+      "type": "c",
+      "def": "CHECK ((status = ANY (ARRAY['pendente'::text, 'confirmado'::text, 'recusado'::text])))"
     },
     {
       "table": "zion_volunteers",
@@ -811,6 +1039,18 @@
       "def": "FOREIGN KEY (moment_id) REFERENCES zion_moments(id) ON DELETE SET NULL"
     },
     {
+      "table": "zion_moment_runs",
+      "name": "zion_moment_runs_event_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "zion_moment_runs_moment_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (moment_id) REFERENCES zion_moments(id) ON DELETE CASCADE"
+    },
+    {
       "table": "zion_moments",
       "name": "zion_moments_event_id_fkey",
       "type": "f",
@@ -839,6 +1079,12 @@
       "name": "zion_roster_volunteer_id_fkey",
       "type": "f",
       "def": "FOREIGN KEY (volunteer_id) REFERENCES zion_volunteers(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "name": "zion_volunteer_blocks_volunteer_id_fkey",
+      "type": "f",
+      "def": "FOREIGN KEY (volunteer_id) REFERENCES zion_volunteers(id) ON DELETE CASCADE"
     }
   ],
   "indexes": [
@@ -861,6 +1107,11 @@
       "name": "zion_preparation_event_id_idx",
       "table": "zion_preparation",
       "def": "CREATE INDEX zion_preparation_event_id_idx ON public.zion_preparation USING btree (event_id)"
+    },
+    {
+      "name": "zion_volunteers_portal_token_key",
+      "table": "zion_volunteers",
+      "def": "CREATE UNIQUE INDEX zion_volunteers_portal_token_key ON public.zion_volunteers USING btree (portal_token)"
     }
   ],
   "views": [],
@@ -877,6 +1128,16 @@
     },
     {
       "schema": "public",
+      "name": "zion_moment_runs_end",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_moment_runs_end()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if new.completed is distinct from old.completed then\n    update public.zion_moment_runs\n       set ended_at = case when new.completed then now() else null end\n     where event_id = new.event_id and moment_id = new.id;\n  end if;\n  return new;\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_moment_runs_start",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_moment_runs_start()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if new.running and new.moment_id is not null then\n    insert into public.zion_moment_runs (event_id, moment_id, started_at)\n    values (new.event_id, new.moment_id, now())\n    on conflict (event_id, moment_id) do nothing;\n  end if;\n  return new;\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "zion_now",
       "def": "CREATE OR REPLACE FUNCTION public.zion_now()\n RETURNS timestamp with time zone\n LANGUAGE sql\n STABLE\nAS $function$\n  select now()\n$function$\n"
     },
@@ -884,6 +1145,21 @@
       "schema": "public",
       "name": "zion_pending_users",
       "def": "CREATE OR REPLACE FUNCTION public.zion_pending_users()\n RETURNS TABLE(email text, name text, created_at timestamp with time zone, confirmed boolean)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select lower(u.email)::text,\n         coalesce(nullif(btrim(u.raw_user_meta_data ->> 'name'), ''), split_part(u.email, '@', 1))::text,\n         u.created_at,\n         u.email_confirmed_at is not null\n  from auth.users u\n  where public.zion_current_role() = 'admin'\n    and u.deleted_at is null\n    and not exists (select 1 from public.zion_access a where a.email = lower(u.email))\n  order by u.created_at\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_portal",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_portal(p_token uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select jsonb_build_object(\n    'name', v.name,\n    'team', v.team,\n    'schedule', coalesce((\n      select jsonb_agg(jsonb_build_object(\n               'event_id', e.id, 'title', e.title, 'date', e.event_date,\n               'time', to_char(e.start_time, 'HH24:MI'), 'location', e.location,\n               'status', r.status, 'reason', r.decline_reason)\n             order by e.event_date, e.start_time)\n        from public.zion_roster r\n        join public.zion_events e on e.id = r.event_id\n       where r.volunteer_id = v.id and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1), '[]'::jsonb),\n    'blocks', coalesce((\n      select jsonb_agg(b.day order by b.day)\n        from public.zion_volunteer_blocks b\n       where b.volunteer_id = v.id and b.day >= (now() at time zone 'America/Sao_Paulo')::date), '[]'::jsonb))\n  from public.zion_volunteers v\n  where v.portal_token = p_token\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_portal_block",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_portal_block(p_token uuid, p_day date, p_blocked boolean)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_id uuid;\nbegin\n  select id into v_id from public.zion_volunteers where portal_token = p_token;\n  if v_id is null then\n    raise exception 'Link inválido';\n  end if;\n  if p_day < (now() at time zone 'America/Sao_Paulo')::date then\n    raise exception 'Só dá para marcar de hoje em diante';\n  end if;\n  if p_blocked then\n    insert into public.zion_volunteer_blocks (volunteer_id, day) values (v_id, p_day)\n    on conflict do nothing;\n  else\n    delete from public.zion_volunteer_blocks where volunteer_id = v_id and day = p_day;\n  end if;\nend;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "zion_portal_respond",
+      "def": "CREATE OR REPLACE FUNCTION public.zion_portal_respond(p_token uuid, p_event uuid, p_status text, p_reason text DEFAULT ''::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_id uuid;\nbegin\n  if p_status not in ('confirmado', 'recusado') then\n    raise exception 'Resposta inválida';\n  end if;\n  select id into v_id from public.zion_volunteers where portal_token = p_token;\n  if v_id is null then\n    raise exception 'Link inválido';\n  end if;\n  update public.zion_roster r\n     set status = p_status,\n         decline_reason = case when p_status = 'recusado' then left(coalesce(btrim(p_reason), ''), 200) else '' end,\n         responded_at = now()\n    from public.zion_events e\n   where r.volunteer_id = v_id and r.event_id = p_event\n     and e.id = r.event_id and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date;\n  if not found then\n    raise exception 'Escala não encontrada ou já passou';\n  end if;\nend;\n$function$\n"
     }
   ],
   "triggers": [
@@ -892,6 +1168,18 @@
       "table": "zion_live_timer",
       "name": "zion_live_timer_touch",
       "def": "CREATE TRIGGER zion_live_timer_touch BEFORE INSERT OR UPDATE ON public.zion_live_timer FOR EACH ROW EXECUTE FUNCTION zion_live_timer_touch()"
+    },
+    {
+      "schema": "public",
+      "table": "zion_live_timer",
+      "name": "zion_moment_runs_start",
+      "def": "CREATE TRIGGER zion_moment_runs_start AFTER INSERT OR UPDATE OF running, moment_id ON public.zion_live_timer FOR EACH ROW EXECUTE FUNCTION zion_moment_runs_start()"
+    },
+    {
+      "schema": "public",
+      "table": "zion_moments",
+      "name": "zion_moment_runs_end",
+      "def": "CREATE TRIGGER zion_moment_runs_end AFTER UPDATE OF completed ON public.zion_moments FOR EACH ROW EXECUTE FUNCTION zion_moment_runs_end()"
     }
   ],
   "platform_triggers": [
@@ -1008,6 +1296,24 @@
       "with_check": null
     },
     {
+      "table": "zion_moment_runs",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_moment_runs",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
       "table": "zion_moments",
       "name": "manager_write",
       "permissive": "PERMISSIVE",
@@ -1054,6 +1360,24 @@
     },
     {
       "table": "zion_roster",
+      "name": "member_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(zion_current_role() IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "name": "manager_write",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "ALL",
+      "qual": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))",
+      "with_check": "(zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text]))"
+    },
+    {
+      "table": "zion_volunteer_blocks",
       "name": "member_read",
       "permissive": "PERMISSIVE",
       "roles": "{authenticated}",
@@ -1132,6 +1456,16 @@
       "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
     },
     {
+      "table": "zion_moment_runs",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
+    },
+    {
+      "table": "zion_moment_runs",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
       "table": "zion_moments",
       "grantee": "authenticated",
       "privileges": "DELETE, INSERT, SELECT, UPDATE"
@@ -1158,6 +1492,16 @@
     },
     {
       "table": "zion_roster",
+      "grantee": "service_role",
+      "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+    },
+    {
+      "table": "zion_volunteer_blocks",
+      "grantee": "authenticated",
+      "privileges": "DELETE, INSERT, SELECT, UPDATE"
+    },
+    {
+      "table": "zion_volunteer_blocks",
       "grantee": "service_role",
       "privileges": "DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
     },
@@ -1175,11 +1519,11 @@
   "counts": [
     {
       "table": "zion_access",
-      "rows": 2
+      "rows": 4
     },
     {
       "table": "zion_events",
-      "rows": 1
+      "rows": 4
     },
     {
       "table": "zion_feedback",
@@ -1191,11 +1535,15 @@
     },
     {
       "table": "zion_live_timer",
+      "rows": 4
+    },
+    {
+      "table": "zion_moment_runs",
       "rows": 0
     },
     {
       "table": "zion_moments",
-      "rows": 9
+      "rows": 36
     },
     {
       "table": "zion_preparation",
@@ -1203,6 +1551,10 @@
     },
     {
       "table": "zion_roster",
+      "rows": 0
+    },
+    {
+      "table": "zion_volunteer_blocks",
       "rows": 0
     },
     {
