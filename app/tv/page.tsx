@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { clock, useAwake, useTvState } from '@/lib/zion-tv';
+import { warnSeconds } from '@/lib/zion-plan';
 
 export default function TvScreen() {
   // A tela lê o evento do próprio endereço: assim a televisão é só um monitor,
@@ -13,6 +14,8 @@ export default function TvScreen() {
   const { state, seconds, live } = useTvState(event || '');
   useAwake();
   const over = seconds < 0;
+  const warn = !over && !!state && seconds <= warnSeconds(state.duration);
+  const late = state?.offset ?? 0;
   const elapsed = state ? state.duration * 60 - seconds : 0;
   const progress = state?.duration ? Math.min(100, Math.max(0, (elapsed / (state.duration * 60)) * 100)) : 0;
   function fullscreen() {
@@ -20,7 +23,7 @@ export default function TvScreen() {
     else void document.documentElement.requestFullscreen().catch(() => {});
   }
   return (
-    <main className={`tv ${over ? 'tv-over' : ''}`}>
+    <main className={`tv ${over ? 'tv-over' : warn ? 'tv-warn' : ''}`}>
       <header className="tv-head">
         <img src="/zion-logo.png" alt="" width="34" height="34" />
         <span className="tv-event">{state?.event || 'ZION CHURCH'}</span>
@@ -44,6 +47,12 @@ export default function TvScreen() {
           </div>
           <strong className="tv-clock">{clock(seconds)}</strong>
           <span className="tv-scale">{over ? 'passou do tempo' : `de ${String(state.duration).padStart(2, '0')}:00`}</span>
+          {state.finish && (
+            <span className={`tv-finish ${late >= 1 ? 'late' : ''}`}>
+              Término do culto {state.finish}
+              {Math.abs(late) >= 1 ? ` · ${late > 0 ? `${late} min atrasado` : `${-late} min adiantado`}` : ''}
+            </span>
+          )}
           <div className="tv-progress">
             <i style={{ width: `${progress}%` }} />
           </div>

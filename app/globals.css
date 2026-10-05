@@ -180,3 +180,18 @@
 .copy-source{display:grid;gap:8px;margin-top:4px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f7faf8}
 .copy-source .copy-check{display:flex!important;align-items:center;gap:8px;font-weight:500}
 .copy-source .copy-check input{width:auto}
+/* Atraso do culto: amarelo antes do vermelho, e o número que importa —
+   quanto o culto inteiro está fora do papel. */
+.timer.warn strong{color:#ffd166}
+.timer.warn span{color:#ffd166}
+.ahead.late{background:#5a2d17;color:#ffc9a8}
+.ahead.early{background:#1f4a5a;color:#c8ecf7}
+.summary-time.late{color:#b4532a;font-weight:700}
+.time strong.late{color:#b4532a}
+.time strong.early{color:#2d7b93}
+.anchor-late{display:block;font-style:normal;font-size:9px;color:#b4532a;margin-top:2px}
+.valid.invalid{color:#b4532a;background:#fbefe7}
+.tv-warn .tv-clock{color:#ffd166}
+.tv-warn .tv-progress i{background:#ffd166}
+.tv-finish{font-size:clamp(13px,1.5vw,22px);color:#9fc0b4;letter-spacing:.04em}
+.tv-finish.late{color:#ffc9a8}

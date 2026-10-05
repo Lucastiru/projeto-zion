@@ -8,6 +8,7 @@ import { downloadSchedulePdf } from '@/lib/zion-pdf';
 import { supabase } from '@/lib/supabase';
 import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
 import { useLiveTimer } from '@/lib/zion-timer';
+import { clockOf, plan, project, warnSeconds } from '@/lib/zion-plan';
 import type { Session } from '@supabase/supabase-js';
 import {
   AlertTriangle,
@@ -46,6 +47,9 @@ export type Moment = {
   details: string;
   items?: string[];
   completedItems?: number[];
+  // Hora de relógio em que o momento tem de começar (HH:MM). Vazio = começa
+  // quando o anterior acabar.
+  hardStart?: string;
   done?: boolean;
 };
 export type Issue = {
@@ -103,13 +107,6 @@ function driveLink(value?: string) {
 function safeDuration(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
-function asTime(start: string, plus: number) {
-  const parts = start.split(':').map(Number);
-  const h = Number.isFinite(parts[0]) ? parts[0] : 0;
-  const m = Number.isFinite(parts[1]) ? parts[1] : 0;
-  const total = h * 60 + m + (Number.isFinite(plus) ? plus : 0);
-  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
 
 export default function Home() { return <ZionAuth>{(session,role) => <ZionWorkspace session={session} role={role}/>}</ZionAuth>; }
 function ZionWorkspace({session,role}:{session:Session;role:string}) {
@@ -126,7 +123,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
-  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp } = useLiveTimer({
+  const { current, seconds, running, driver, toggle, goTo, stop, nudge, stamp, started, now } = useLiveTimer({
     event: selectedEvent, moments, can: canDrive, who: myName, report,
   });
   const [editing, setEditing] = useState<Moment | null>(null);
@@ -142,27 +139,35 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [liveFullscreen, setLiveFullscreen] = useState(false);
   const [tvOpen, setTvOpen] = useState(false);
-  const timings = useMemo(() => {
-    let sum = 0;
-    return moments.map((m) => {
-      const duration = safeDuration(m.duration);
-      const time = asTime(start, sum);
-      sum += duration;
-      return { ...m, duration, time, end: asTime(start, sum) };
-    });
-  }, [moments, start]);
-  const total = moments.reduce((a, m) => a + safeDuration(m.duration), 0);
+  // O roteiro no papel, respeitando hora marcada: ver lib/zion-plan.ts.
+  const slots = useMemo(() => moments.map(m => ({ duration: safeDuration(m.duration), hardStart: m.hardStart || undefined })), [moments]);
+  const planned = useMemo(() => plan(start, slots), [start, slots]);
+  const timings = useMemo(
+    () => moments.map((m, i) => ({ ...m, duration: slots[i].duration, time: clockOf(planned[i].start), end: clockOf(planned[i].end), hard: planned[i].hard, overlap: planned[i].overlap })),
+    [moments, slots, planned],
+  );
+  // Extensão do culto no papel, folgas antes de hora marcada incluídas.
+  const total = planned.length ? Math.round(planned[planned.length - 1].end - planned[0].start) : 0;
   const prepared = prep.filter((x) => x.done).length;
   const active = timings[current] ?? timings[0];
   const next = timings[current + 1];
+  // O roteiro corrigido pelo que já aconteceu. Antes do primeiro comando, e
+  // depois que o último momento foi concluído, vale o papel.
+  const closed = !!active?.done && current === timings.length - 1;
+  const nowMinutes = (() => { const d = new Date(now()); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; })();
+  const forecast = started && !closed && timings.length ? project(planned, slots, current, nowMinutes, seconds / 60) : null;
+  const offset = forecast ? Math.round(forecast.offset) : 0;
+  const pace = !forecast ? `Início ${timings[0]?.time ?? start}` : Math.abs(offset) < 1 ? 'No horário' : offset > 0 ? `${offset} min atrasado` : `${-offset} min adiantado`;
+  const finish = forecast ? clockOf(forecast.finish) : timings.at(-1)?.end ?? start;
+  const warning = seconds > 0 && !!active && seconds <= warnSeconds(active.duration);
   // O Modo TV é alimentado por esta transmissão: o operador continua sendo o
   // dono do cronômetro e a televisão só repete o que ele fizer. Quem só tem
   // leitura não transmite, para duas telas não disputarem o mesmo canal.
   const tvState = useMemo(
     () => (event && active && canDrive
-      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp }
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset }
       : null),
-    [event, active, seconds, running, stamp, canDrive],
+    [event, active, seconds, running, stamp, canDrive, finish, offset],
   );
   useTvBroadcast(tvState ? String(selectedEvent) : '', tvState);
   async function saveMoment(e: React.FormEvent<HTMLFormElement>) {
@@ -181,6 +186,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       owner: String(f.get('owner')).trim(),
       details: String(f.get('details')).trim(),
       items,
+      hardStart: (() => { const v = f.get('hard_start'); return typeof v === 'string' ? v : ''; })(),
     };
     const saved = await setMoments((ms) =>
       isNew
@@ -471,7 +477,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                       <span className="live-label">
                         <Radio size={14} /> AGORA • {active.time}
                       </span>
-                      <span className="ahead">No horário</span>
+                      <span className={`ahead ${offset >= 1 ? 'late' : offset <= -1 ? 'early' : ''}`} title={`Término previsto ${finish}`}>{pace}</span>
                     </div>
                     <div className="live-body">
                       <div>
@@ -497,7 +503,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                           </ol>
                         ) : null}
                       </div>
-                      <div className={`timer ${seconds < 0 ? 'over' : ''}`}>
+                      <div className={`timer ${seconds < 0 ? 'over' : warning ? 'warn' : ''}`}>
                         <strong>{clock(seconds)}</strong>
                         <span>
                           {seconds < 0 ? 'passou do tempo' : `de ${active.duration}:00`}
@@ -551,8 +557,9 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                       <p className="eyebrow">ROTEIRO</p>
                       <h3>Cronograma do culto</h3>
                     </div>
-                    <span className="summary-time">
-                      Término previsto {asTime(start, total)}
+                    <span className={`summary-time ${offset >= 1 ? 'late' : ''}`}>
+                      Término previsto {finish}
+                      {forecast && Math.abs(offset) >= 1 ? ` (papel: ${timings.at(-1)?.end})` : ''}
                     </span>
                   </div>
                   <div className="schedule-list">
@@ -562,8 +569,23 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         key={item.id}
                       >
                         <div className="time">
-                          <strong>{item.time}</strong>
-                          <span>{item.duration} min</span>
+                          {(() => {
+                            const shift = forecast && i > current && !item.done ? Math.round(forecast.expected[i].start - planned[i].start) : 0;
+                            return shift ? (
+                              <strong className={shift > 0 ? 'late' : 'early'} title={`No papel: ${item.time}`}>
+                                {clockOf(forecast!.expected[i].start)}
+                              </strong>
+                            ) : (
+                              <strong>{item.time}</strong>
+                            );
+                          })()}
+                          <span>
+                            {item.hard ? '⚓ ' : ''}
+                            {item.duration} min
+                          </span>
+                          {forecast && forecast.expected[i]?.late >= 1 && i > current ? (
+                            <em className="anchor-late">marcada {item.hardStart} · +{Math.round(forecast.expected[i].late)} min</em>
+                          ) : null}
                         </div>
                         <div className="node">
                           {item.done ? (
@@ -911,7 +933,7 @@ function ScheduleView({
   setMoments,
 }: {
   event?: ChurchEvent;
-  timings: (Moment & { time: string; end: string })[];
+  timings: (Moment & { time: string; end: string; hard: boolean; overlap: number })[];
   total: number;
   start: string;
   setEditing: (m: Moment) => void;
@@ -965,19 +987,26 @@ function ScheduleView({
         <ChevronRight />
         <div>
           <span>Término previsto</span>
-          <strong>{asTime(start, total)}</strong>
+          <strong>{timings.at(-1)?.end ?? start}</strong>
         </div>
-        <span className="valid">
-          <Check size={14} /> Cronograma válido
-        </span>
+        {timings.some(m => m.overlap > 0) ? (
+          <span className="valid invalid">
+            <AlertTriangle size={14} /> Não cabe antes de uma hora marcada
+          </span>
+        ) : (
+          <span className="valid">
+            <Check size={14} /> Cronograma válido
+          </span>
+        )}
       </div>
       <div className="editor-list">
         {timings.map((m) => (
           <div className="editor-row" key={m.id}>
             <GripVertical size={18} />
             <div className="editor-time">
-              <strong>{m.time}</strong>
+              <strong>{m.hard ? '⚓ ' : ''}{m.time}</strong>
               <span>até {m.end}</span>
+              {m.overlap > 0 && <em className="anchor-late">o anterior passa {m.overlap} min da hora marcada</em>}
             </div>
             <div className="editor-main">
               <strong>{m.title}</strong>
@@ -1405,6 +1434,14 @@ function MomentModal({
             <input name="owner" required defaultValue={moment?.owner} />
           </label>
         </div>
+        <label>
+          Hora marcada{' '}
+          <small className="field-help">
+            Opcional. Só para o que tem de começar no relógio — a Palavra, uma
+            transmissão. O atraso antes dela é absorvido pela folga, se houver.
+          </small>
+          <input name="hard_start" type="time" defaultValue={moment?.hardStart} />
+        </label>
         <label>
           Orientações para a equipe
           <textarea name="details" defaultValue={moment?.details} />

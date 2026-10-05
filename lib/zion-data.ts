@@ -11,8 +11,8 @@ const eventsCodec: Codec<ChurchEvent> = {
   write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null }),
 };
 const momentsCodec: Codec<Moment> = {
-  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], done:r.completed }),
-  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed_item_indexes:r.completedItems || [], completed:!!r.done, position:i }),
+  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], hardStart:r.hard_start ? String(r.hard_start).slice(0,5) : '', done:r.completed }),
+  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed_item_indexes:r.completedItems || [], hard_start:r.hardStart || null, completed:!!r.done, position:i }),
 };
 const prepCodec: Codec<PrepItem> = {
   read: r => ({ id:r.id, team:r.team, text:r.description, assigned:r.assigned_to || '', done:r.completed }),

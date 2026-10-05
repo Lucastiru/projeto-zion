@@ -58,12 +58,14 @@ export function useLiveTimer({ event, moments, can, who, report }: {
     return () => { alive = false; void supabase.removeChannel(channel); };
   }, [event, report]);
 
-  // Correndo, a tela precisa se redesenhar sozinha; parado, não há o que animar.
+  // Correndo, o relógio anda; parado, quem anda é o atraso do culto — pausa
+  // também empurra o término. Os dois pedem redesenho, em ritmos diferentes.
+  const live = !!row;
   useEffect(() => {
-    if (!row?.running) return;
-    const beat = setInterval(() => redraw(n => n + 1), 250);
+    if (!live) return;
+    const beat = setInterval(() => redraw(n => n + 1), row?.running ? 250 : 1000);
     return () => clearInterval(beat);
-  }, [row?.running]);
+  }, [live, row?.running]);
 
   const serverNow = useCallback(() => Date.now() + skew, [skew]);
   // A posição sai do id do momento; a coluna numérica é só o atalho de quando o
@@ -112,5 +114,9 @@ export function useLiveTimer({ event, moments, can, who, report }: {
     // Carimbo do último toque no banco. Quem transmite para a TV usa isto para
     // mandar o pacote na hora em que algo muda, sem esperar o pulso.
     stamp: row?.updated_at || '',
+    // O culto começou quando alguém deu o primeiro comando. Antes disso, o
+    // horário que vale é o do papel.
+    started: live,
+    now: serverNow,
   };
 }
