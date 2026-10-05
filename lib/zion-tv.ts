@@ -24,6 +24,9 @@ export type TvState = {
   offset?: number;
   // Recado do operador para quem está no palco. Vazio = nada na tela.
   message?: string;
+  // Id do ministério do evento. A marca (nome, cor, logo) a TV busca à parte
+  // — um logo de 300 KB não cabe num pacote mandado a cada três segundos.
+  ministry?: string;
 };
 
 const channelFor = (event: string) => `zion-tv-${event}`;

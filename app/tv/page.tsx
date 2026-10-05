@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Bell, BellOff, Maximize2 } from 'lucide-react';
 import { clock, useAwake, useTvState } from '@/lib/zion-tv';
 import { warnSeconds } from '@/lib/zion-plan';
+import { brandStyle, ZION, type Brand } from '@/lib/zion-brand';
+import { supabase } from '@/lib/supabase';
 
 export default function TvScreen() {
   // A tela lê o evento do próprio endereço: assim a televisão é só um monitor,
@@ -16,6 +18,17 @@ export default function TvScreen() {
   const over = seconds < 0;
   const warn = !over && !!state && seconds <= warnSeconds(state.duration);
   const late = state?.offset ?? 0;
+  // Marca do ministério do evento, pedida pelo id que já está no link. Busca
+  // de novo quando o operador troca o ministério com a TV ligada.
+  const [brand, setBrand] = useState<Brand | null>(null);
+  const ministryKey = state?.ministry ?? '';
+  useEffect(() => {
+    let alive = true;
+    if (event) void supabase.rpc('zion_tv_identity', { p_event: event }).then(({ data }) => {
+      if (alive) setBrand(data ? (data as Brand) : null);
+    });
+    return () => { alive = false; };
+  }, [event, ministryKey]);
   const message = state?.message || '';
   // Gongo. O navegador só toca som depois de um toque na página, então o sino
   // nasce desligado a cada abertura e o toque nele é o próprio desbloqueio.
@@ -77,9 +90,9 @@ export default function TvScreen() {
     else void document.documentElement.requestFullscreen().catch(() => {});
   }
   return (
-    <main className={`tv ${over ? 'tv-over' : warn ? 'tv-warn' : ''} ${message ? 'tv-has-message' : ''}`}>
+    <main className={`tv ${over ? 'tv-over' : warn ? 'tv-warn' : ''} ${message ? 'tv-has-message' : ''} ${brand ? 'themed' : ''}`} style={brandStyle(brand)}>
       <header className="tv-head">
-        <img src="/zion-logo.png" alt="" width="34" height="34" />
+        <img className="brand-logo" src={brand?.logo || ZION.logo} alt="" width="34" height="34" />
         <span className="tv-event">{state?.event || 'ZION CHURCH'}</span>
         <span className={`tv-signal ${live ? 'on' : ''}`}>
           <i />

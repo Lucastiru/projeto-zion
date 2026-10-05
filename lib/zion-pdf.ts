@@ -1,4 +1,5 @@
 import type { ChurchEvent, Moment } from '@/app/page';
+import { deep, tint, ZION, type Brand } from './zion-brand';
 
 type TimedMoment = Moment & { time: string; end: string };
 
@@ -6,7 +7,11 @@ function safeFileName(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'culto';
 }
 
-export async function downloadSchedulePdf(event: ChurchEvent, moments: TimedMoment[], total: number) {
+// O cabeçalho sai com a identidade do ministério do evento — o roteiro do
+// Eklektos chega azul, como o que a equipe já usa. Sem ministério, Zion verde.
+export async function downloadSchedulePdf(event: ChurchEvent, moments: TimedMoment[], total: number, brand?: Brand | null) {
+  const color = brand?.color ?? ZION.color;
+  const label = brand ? `${brand.name.toUpperCase()}  |  ZION CHURCH` : 'ZION CHURCH  |  ORDEM';
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const width = doc.internal.pageSize.getWidth();
@@ -22,12 +27,22 @@ export async function downloadSchedulePdf(event: ChurchEvent, moments: TimedMome
   };
   const ensure = (needed: number) => { if (y + needed > height - 18) newPage(); };
   const header = (cover = true) => {
-    doc.setFillColor(21, 56, 45);
+    doc.setFillColor(...(brand ? deep(color) : ([21, 56, 45] as [number, number, number])));
     doc.rect(0, 0, width, cover ? 48 : 13, 'F');
-    doc.setTextColor(215, 242, 97);
+    doc.setTextColor(...(brand ? tint(color) : ([215, 242, 97] as [number, number, number])));
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(cover ? 11 : 8);
-    doc.text('ZION CHURCH  |  ORDEM', margin, cover ? 16 : 8.5);
+    doc.text(label, margin, cover ? 16 : 8.5);
+    // Logo do ministério à direita da capa, num quadro branco para logo de
+    // fundo transparente não sumir no escuro. Logo que o jsPDF não aceitar
+    // não derruba o PDF: sai sem ele.
+    if (cover && brand?.logo) {
+      try {
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(width - margin - 30, 9, 30, 30, 3, 3, 'F');
+        doc.addImage(brand.logo, brand.logo.startsWith('data:image/png') ? 'PNG' : 'JPEG', width - margin - 28, 11, 26, 26);
+      } catch { /* sem logo, segue o PDF */ }
+    }
     if (cover) {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);

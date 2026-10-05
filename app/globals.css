@@ -268,3 +268,50 @@
 .portal-blocked{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid #eef1ef}
 .portal-blocked span{display:block}
 .portal-blocked button{border:0;background:transparent;color:#a8441e;font-size:13px;cursor:pointer}
+/* Identidade do ministério. Quem define a cor é o cadastro (--brand, posto
+   inline); aqui ela vira fundo escurecido e destaque clareado, para o texto
+   continuar legível com qualquer cor escolhida. */
+.themed{--brand-deep:color-mix(in srgb,var(--brand) 62%,#000);--brand-mid:color-mix(in srgb,var(--brand) 75%,#000);--lime:color-mix(in srgb,var(--brand) 30%,#fff)}
+.themed .sidebar{background:var(--brand-deep)}
+.themed .nav-item.active{background:color-mix(in srgb,var(--brand) 55%,#fff 10%)}
+.themed .sidebar-footer{border-top-color:color-mix(in srgb,var(--brand) 50%,#fff 12%)}
+.themed .live-card{background:var(--brand-mid)}
+.themed.live-fullscreen,.themed.live-fullscreen .topbar{background:var(--brand-deep)}
+.tv.themed{background:var(--brand-deep)}
+.tv.themed.tv-over{background:#4a1512}
+.brand-logo{object-fit:contain;border-radius:6px}
+.ministry-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.ministries{margin-top:22px}
+.ministry-list{display:grid;gap:8px;margin-top:14px}
+.ministry-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ministry-row>div{flex:1}
+.ministry-row strong,.ministry-row small{display:block}
+.ministry-row small{color:#7a847f;font-size:10px;margin-top:2px}
+.ministry-swatch{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;overflow:hidden}
+.ministry-swatch img{width:100%;height:100%;object-fit:contain;background:#fff}
+.ministry-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:14px;border-radius:12px;background:var(--brand-mid);color:#fff}
+.ministry-preview img,.ministry-preview b{width:40px;height:40px;border-radius:8px;object-fit:contain;background:#fff;display:grid;place-items:center;color:var(--brand-deep)}
+.ministry-preview span{flex:1}
+.ministry-preview strong,.ministry-preview small{display:block}
+.ministry-preview small{opacity:.75;font-size:10px}
+.ministry-preview i{font-style:normal;font-weight:800;font-size:22px;color:var(--lime)}
+.ghost-btn.danger{color:#a8441e;margin-right:auto}
+/* Selo do ministério na escala do voluntário: a cor dele escurecida, para o
+   nome em branco ler com qualquer cor escolhida. */
+.portal-ministry{display:inline-flex;align-items:center;gap:6px;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:20px;padding:3px 10px 3px 4px;margin-bottom:6px;background-blend-mode:multiply;box-shadow:inset 0 0 0 999px rgb(0 0 0 / .32)}
+.portal-ministry img{width:18px;height:18px;border-radius:50%;object-fit:contain;background:#fff}
+/* Correção de contraste: proporção fixa de preto não basta — amarelo continua
+   claro demais e o texto secundário some. Aqui a luminosidade é FIXA (oklch
+   relativo) e só tom e saturação vêm do cadastro, então qualquer cor vira
+   fundo escuro de verdade. Navegador sem suporte fica com o color-mix acima. */
+.themed{--brand-deep:oklch(from var(--brand) .27 min(c,.12) h);--brand-mid:oklch(from var(--brand) .35 min(c,.13) h);--lime:oklch(from var(--brand) .87 min(c,.11) h)}
+.themed .nav-item.active{background:oklch(from var(--brand) .45 min(c,.13) h)}
+/* Os verdes fixos que sobravam dentro do tema. */
+.themed .progress{background:#ffffff24}
+.themed .secondary-btn,.themed .timer-nudge button,.themed .stage-shortcuts button,.themed .stage-form button,.themed .stage-form input{border-color:#ffffff3d}
+.themed .stage-form input{background:#0000002e}
+.themed .live-sequence li b{background:var(--lime)}
+.themed .live .node{background:var(--brand-mid)}
+.themed .sidebar-footer{border-top-color:#ffffff26}
+.tv.themed .tv-now span,.tv.themed .tv-scale,.tv.themed .tv-finish:not(.late),.tv.themed .tv-head{color:oklch(from var(--brand) .82 .04 h)}
+.tv.themed .tv-signal.on i{background:var(--lime)}
