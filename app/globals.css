@@ -214,3 +214,13 @@
    com recado na tela o relógio cede espaço para nada se sobrepor. */
 .tv{padding-top:max(76px,4vh)}
 .tv-has-message .tv-clock{font-size:min(24vw,36vh)}
+/* Relatório papel × realidade. Tabela larga rola dentro dela no celular. */
+.report-table-scroll{overflow-x:auto;margin:18px 0}
+.report-table{width:100%;border-collapse:collapse;font-size:12px;min-width:560px}
+.report-table th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7a847f;padding:8px;border-bottom:1px solid var(--line)}
+.report-table td{padding:9px 8px;border-bottom:1px solid #eef1ef;vertical-align:top}
+.report-table td small{display:block;color:#89928e;font-size:10px;margin-top:2px}
+.report-table td em{color:#89928e}
+.report-table td.late{color:#b4532a;font-weight:700}
+.report-table td.early{color:#2d7b93;font-weight:700}
+.score small{font-size:12px}
