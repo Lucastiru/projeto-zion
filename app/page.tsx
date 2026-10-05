@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
 import { useLiveTimer } from '@/lib/zion-timer';
 import { clockOf, compare, plan, project, warnSeconds, type Planned } from '@/lib/zion-plan';
+import { brandStyle, ZION, type Brand } from '@/lib/zion-brand';
+import { MinistriesPanel } from '@/components/zion-ministries';
 import type { Session } from '@supabase/supabase-js';
 import {
   AlertTriangle,
@@ -74,6 +76,16 @@ export type ChurchEvent = {
   type: string;
   location: string;
   notes?: string;
+  // Ministério dono do evento; vazio = Zion Church. Ver zion_ministries.
+  ministryId?: string;
+};
+// Identidade visual de um ministério (Eklektos, ...): aparece nas telas dos
+// eventos dele — operador, TV, link do voluntário e PDF.
+export type Ministry = {
+  id: string | number;
+  name: string;
+  color: string;
+  logo?: string;
 };
 export type Volunteer = {
   id: string | number;
@@ -116,7 +128,7 @@ function safeDuration(value: number) {
 export default function Home() { return <ZionAuth>{(session,role) => <ZionWorkspace session={session} role={role}/>}</ZionAuth>; }
 function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [selectedEvent,setSelectedEvent] = useState<string | number>('');
-  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,markInvited,reloadRoster,status,loading,report} = useZionData(selectedEvent);
+  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,markInvited,reloadRoster,ministries,setMinistries,status,loading,report} = useZionData(selectedEvent);
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
   const [view, setView] = useState('calendar');
   const displayName = session.user.user_metadata?.name || 'Meu perfil';
@@ -125,6 +137,12 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const myName = String(session.user.user_metadata?.name || session.user.email || '').trim();
   const initials = session.user.user_metadata?.name ? String(session.user.user_metadata.name).trim().split(/\s+/).map(part=>part[0]).slice(0,2).join('').toUpperCase() : 'EU';
   const event = events.find(e=>e.id===selectedEvent);
+  // A identidade segue o evento aberto. Agenda, usuários e configurações são
+  // telas da igreja inteira e ficam com a marca Zion — trocar de cor ali faria
+  // parecer que a agenda é do Eklektos.
+  const ministry = ministries.find(m => String(m.id) === event?.ministryId);
+  const brand: Brand | null = ministry ? { name: ministry.name, color: ministry.color, logo: ministry.logo } : null;
+  const themed = !!brand && !['calendar', 'users', 'settings'].includes(view);
   const failed = /falha|não foi possível|selecione|use uma/i.test(status);
   // Quem controla o cronômetro é o evento, não esta aba: ver lib/zion-timer.ts.
   const canDrive = role === 'admin' || role === 'manager';
@@ -170,7 +188,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   // leitura não transmite, para duas telas não disputarem o mesmo canal.
   const tvState = useMemo(
     () => (event && active && canDrive
-      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset, message }
+      ? { event: event.title, title: active.title, owner: active.owner, time: active.time, duration: active.duration, seconds, running, stamp, finish, offset, message, ministry: event.ministryId || '' }
       : null),
     [event, active, seconds, running, stamp, canDrive, finish, offset, message],
   );
@@ -231,6 +249,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       location: String(f.get('location')).trim(),
       // f.get devolve string ou File; só a string interessa aqui.
       notes: (typeof notesField === 'string' ? notesField : '').trim(),
+      ministryId: (() => { const v = f.get('ministry'); return typeof v === 'string' ? v : ''; })(),
     };
     const saved = await setEvents((v) => editing ? v.map(x => x.id === item.id ? item : x) : [...v, item]);
     if (!saved) return;
@@ -323,14 +342,15 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   }
   return (
     <main
-      className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${liveFullscreen ? 'live-fullscreen' : ''}`}
+      className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${liveFullscreen ? 'live-fullscreen' : ''} ${themed ? 'themed' : ''}`}
+      style={themed ? brandStyle(brand) : undefined}
     >
       <aside className="sidebar">
         <div className="brand">
-          <img src="/zion-logo.png" alt="Zion Church" />
+          <img className="brand-logo" src={themed && brand?.logo ? brand.logo : ZION.logo} alt={themed && brand ? brand.name : ZION.name} />
           <span>
-            <b>ZION</b>
-            <small>CHURCH • ORDEM</small>
+            <b>{themed && brand ? brand.name.toUpperCase() : 'ZION'}</b>
+            <small>{themed && brand ? 'ZION CHURCH' : 'CHURCH • ORDEM'}</small>
           </span>
           <button
             aria-label="Recolher menu"
@@ -383,7 +403,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">ZION CHURCH{event && view!=='settings' && view!=='users' ? ' • '+event.type.toUpperCase() : ''}</p>
+            <p className="eyebrow">{themed && brand ? brand.name.toUpperCase() : 'ZION CHURCH'}{event && view!=='settings' && view!=='users' ? ' • '+event.type.toUpperCase() : ''}</p>
             <h1>{view==='users' ? 'Usuários e acessos' : view==='settings' ? 'Configurações' : event ? event.title+' • '+event.date.split('-').reverse().join('/') : 'Agenda da igreja'}</h1>
           </div>
           <div className="top-actions">
@@ -471,6 +491,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           {failed && view!=='settings' && view!=='users' && <p role="alert" className="operation-error">Não foi possível concluir a operação. Verifique sua conexão e tente novamente.{role==='admin' && <button onClick={()=>setView('settings')}>Ver detalhes</button>}</p>}
           {view==='users' && role==='admin' && <UsersPanel role={role} email={session.user.email || ''}/>}
           {view==='settings' && role==='admin' && <SettingsPanel role={role} status={loading ? 'Carregando dados…' : status}/>}
+          {view==='settings' && role==='admin' && <MinistriesPanel ministries={ministries} setMinistries={setMinistries} report={report}/>}
 
           {view === 'live' && !active && <div className="surface"><h2>Nenhum momento neste evento</h2><button className="primary-solid" onClick={() => setView('schedule')}>Montar cronograma</button></div>}
           {view === 'live' && active && (
@@ -671,6 +692,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           {view === 'calendar' && (
             <CalendarView
               events={events}
+              ministries={ministries}
               selectedEvent={selectedEvent}
               choose={(id) => {
                 setSelectedEvent(id);
@@ -682,6 +704,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           {view === 'schedule' && (
             <ScheduleView
               event={event}
+              brand={brand}
               timings={timings}
               total={total}
               start={start}
@@ -751,6 +774,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           save={saveEvent}
           event={eventOpen === 'new' ? undefined : eventOpen}
           events={events}
+          ministries={ministries}
         />
       )}{' '}
       {volunteerEditing !== null && (
@@ -858,16 +882,21 @@ function TvModal({ event, close }: { event: string | number; close: () => void }
 
 function CalendarView({
   events,
+  ministries,
   selectedEvent,
   choose,
   open,
 }: {
   events: ChurchEvent[];
+  ministries: Ministry[];
   selectedEvent: string | number;
   choose: (id: string | number) => void;
   open: () => void;
 }) {
   const [month,setMonth] = useState(() => new Date(new Date().getFullYear(),new Date().getMonth(),1));
+  // Na agenda cada evento leva a cor do seu ministério: dá para bater o olho e
+  // saber de quem é a noite.
+  const colorOf = (e: ChurchEvent) => ministries.find(m => String(m.id) === e.ministryId)?.color;
   const prefix = `${month.getFullYear()}-${String(month.getMonth()+1).padStart(2,'0')}-`;
   const days = [...Array.from({length:(month.getDay()+6)%7},()=>null), ...Array.from({ length: new Date(month.getFullYear(),month.getMonth()+1,0).getDate() }, (_, i) => i + 1)];
   const week = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
@@ -924,7 +953,7 @@ function CalendarView({
                       key={e.id}
                       onClick={() => choose(e.id)}
                     >
-                      <strong>{e.time}</strong>
+                      <strong>{colorOf(e) && <i className="ministry-dot" style={{ background: colorOf(e) }} />}{e.time}</strong>
                       <span>{e.title}</span>
                     </button>
                   ))}
@@ -945,7 +974,7 @@ function CalendarView({
                 <small>{new Date(`${e.date}T12:00:00`).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')}</small>
               </span>
               <span className="agenda-body">
-                <strong>{e.title}</strong>
+                <strong>{colorOf(e) && <i className="ministry-dot" style={{ background: colorOf(e) }} />}{e.title}</strong>
                 <small>{e.time} · {e.type}{e.location ? ` · ${e.location}` : ''}</small>
               </span>
               <ChevronRight size={16} />
@@ -970,6 +999,7 @@ function CalendarView({
 }
 function ScheduleView({
   event,
+  brand,
   timings,
   total,
   start,
@@ -977,6 +1007,7 @@ function ScheduleView({
   setMoments,
 }: {
   event?: ChurchEvent;
+  brand: Brand | null;
   timings: (Moment & { time: string; end: string; hard: boolean; overlap: number })[];
   total: number;
   start: string;
@@ -994,7 +1025,7 @@ function ScheduleView({
           </p>
         </div>
         <div className="view-actions">
-          <button className="ghost-btn" disabled={!event || !timings.length} onClick={() => event && void downloadSchedulePdf(event, timings, total)}>
+          <button className="ghost-btn" disabled={!event || !timings.length} onClick={() => event && void downloadSchedulePdf(event, timings, total, brand)}>
             <FileText size={15} /> Baixar PDF
           </button>
           <button className="ghost-btn">
@@ -1717,11 +1748,13 @@ function EventModal({
   save,
   event,
   events,
+  ministries,
 }: {
   close: () => void;
   save: (e: React.FormEvent<HTMLFormElement>) => void;
   event?: ChurchEvent;
   events: ChurchEvent[];
+  ministries: Ministry[];
 }) {
   // O mais recente vem primeiro e já selecionado: é quase sempre o culto da
   // semana passada, que é de onde se quer partir.
@@ -1752,6 +1785,16 @@ function EventModal({
             <input name="time" type="time" required defaultValue={event?.time ?? '19:45'} />
           </label>
         </div>
+        <label>
+          Ministério{' '}
+          <small className="field-help">Nome, cor e logo dele aparecem nas telas, na TV, no link do voluntário e no PDF.</small>
+          {/* Evento novo herda o ministério do culto mais recente — o mesmo
+              que já vem selecionado em "Começar a partir de". */}
+          <select name="ministry" defaultValue={event ? event.ministryId || '' : sources[0]?.ministryId || ''}>
+            <option value="">Zion Church</option>
+            {ministries.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+          </select>
+        </label>
         <div className="form-grid">
           <label>
             Tipo

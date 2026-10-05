@@ -2,8 +2,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Seat = { event_id: string; title: string; date: string; time: string; location: string; status: 'pendente' | 'confirmado' | 'recusado'; reason: string };
-type Portal = { name: string; team: string; schedule: Seat[]; blocks: string[] };
+type Seat = { event_id: string; title: string; date: string; time: string; location: string; status: 'pendente' | 'confirmado' | 'recusado'; reason: string; ministry_id: string | null };
+type Mark = { name: string; color: string; logo: string | null };
+// `ministries` vem uma vez, num mapa à parte das escalas: logo repetido em
+// cada escala pesaria no celular de quem abre pelo WhatsApp.
+type Portal = { name: string; team: string; schedule: Seat[]; ministries?: Record<string, Mark>; blocks: string[] };
 
 // Data do banco (AAAA-MM-DD) por extenso, ao meio-dia para o fuso não puxar o
 // dia para trás.
@@ -78,6 +81,15 @@ export default function VolunteerPortal() {
         {upcoming.map(seat => (
           <article key={seat.event_id} className={`portal-seat ${seat.status}`}>
             <div>
+              {(() => {
+                const mark = seat.ministry_id ? portal.ministries?.[seat.ministry_id] : undefined;
+                return mark ? (
+                  <em className="portal-ministry" style={{ background: mark.color }}>
+                    {mark.logo && <img src={mark.logo} alt="" />}
+                    {mark.name}
+                  </em>
+                ) : null;
+              })()}
               <strong>{seat.title}</strong>
               <span>{longDate(seat.date)} · {seat.time}{seat.location ? ` · ${seat.location}` : ''}</span>
             </div>

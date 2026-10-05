@@ -1,14 +1,18 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
-import type { Moment, Issue, PrepItem, ChurchEvent, Volunteer } from '@/app/page';
+import type { Moment, Issue, PrepItem, ChurchEvent, Volunteer, Ministry } from '@/app/page';
 
 type Row = Record<string, any>;
 type Update<T> = T[] | ((previous: T[]) => T[]);
 type Codec<T> = { read: (row: Row) => T; write: (item: T, index: number) => Row };
 const eventsCodec: Codec<ChurchEvent> = {
-  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '' }),
-  write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null }),
+  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '', ministryId:r.ministry_id || '' }),
+  write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null, ministry_id:r.ministryId || null }),
+};
+const ministriesCodec: Codec<Ministry> = {
+  read: r => ({ id:r.id, name:r.name, color:r.color, logo:r.logo_url || '' }),
+  write: r => ({ id:r.id, name:r.name.trim(), color:r.color, logo_url:r.logo || null }),
 };
 const momentsCodec: Codec<Moment> = {
   read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], hardStart:r.hard_start ? String(r.hard_start).slice(0,5) : '', done:r.completed }),
@@ -107,6 +111,7 @@ export function useZionData(event: string | number) {
   const report = useCallback((text: string) => setStatus(text),[]);
   const events = useRows('zion_events',eventsCodec,undefined,report);
   const volunteers = useRows('zion_volunteers',volunteersCodec,undefined,report);
+  const ministries = useRows('zion_ministries',ministriesCodec,undefined,report);
   const moments = useRows('zion_moments',momentsCodec,event,report);
   const prep = useRows('zion_preparation',prepCodec,event,report);
   const issues = useRows('zion_issues',issuesCodec,event,report);
@@ -154,7 +159,7 @@ export function useZionData(event: string | number) {
     }
     if (eventRef.current === event) setRoster(next.filter(x => x.scheduled).map(x => String(x.id))); return true;
   }
-  return { events:events.rows,setEvents:events.change,volunteers:visibleVolunteers,setVolunteers,markInvited,reloadRoster:() => setRosterVersion(n => n + 1),
+  return { events:events.rows,setEvents:events.change,ministries:ministries.rows,setMinistries:ministries.change,volunteers:visibleVolunteers,setVolunteers,markInvited,reloadRoster:() => setRosterVersion(n => n + 1),
     moments:moments.rows,setMoments:moments.change,prep:prep.rows,setPrep:prep.change,issues:issues.rows,setIssues:issues.change,
     status,report,loading:events.loading || volunteers.loading || moments.loading || prep.loading || issues.loading || rosterLoading };
 }
