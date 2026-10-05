@@ -1,5 +1,5 @@
 -- Baseline do schema public, extraído do projeto Supabase svcpwtmccskohjfbjqfx.
--- Gerado por scripts/dump-schema.mjs em 2026-10-05T01:51:44.590Z.
+-- Gerado por scripts/dump-schema.mjs em 2026-10-05T12:25:09.463Z.
 -- Reconstruído do catálogo do Postgres: confira antes de aplicar num banco novo.
 
 -- Tabelas
@@ -17,9 +17,11 @@ create table if not exists public.zion_events (
   event_type text default 'Culto'::text not null,
   location text default ''::text not null,
   created_at timestamp with time zone default now() not null,
-  notes_url text
+  notes_url text,
+  ministry_id uuid
 );
 comment on column public.zion_events.notes_url is 'Endereço dos recados do culto no Drive. Somente http(s).';
+comment on column public.zion_events.ministry_id is 'Ministério do evento. Nulo = Zion Church. Apagar o ministério devolve o evento para Zion Church.';
 
 create table if not exists public.zion_feedback (
   event_id uuid not null,
@@ -52,6 +54,15 @@ comment on table public.zion_live_timer is 'Cronômetro ao vivo, uma linha por e
 comment on column public.zion_live_timer.ends_at is 'Alvo em hora do servidor enquanto o cronômetro corre. Nulo quando pausado.';
 comment on column public.zion_live_timer.remaining_seconds is 'Quanto falta quando pausado. Negativo quando o momento estourou o tempo.';
 comment on column public.zion_live_timer.stage_message is 'Texto que o operador manda para a tela do palco. Vazio = sem mensagem.';
+
+create table if not exists public.zion_ministries (
+  id uuid default gen_random_uuid() not null,
+  name text not null,
+  color text default '#15382d'::text not null,
+  logo_url text,
+  created_at timestamp with time zone default now() not null
+);
+comment on table public.zion_ministries is 'Ministérios da igreja (Eklektos, ...). Identidade visual dos eventos: nome, cor, logo.';
 
 create table if not exists public.zion_moment_runs (
   event_id uuid not null,
@@ -118,6 +129,7 @@ alter table public.zion_events add constraint zion_events_pkey PRIMARY KEY (id);
 alter table public.zion_feedback add constraint zion_feedback_pkey PRIMARY KEY (event_id);
 alter table public.zion_issues add constraint zion_issues_pkey PRIMARY KEY (id);
 alter table public.zion_live_timer add constraint zion_live_timer_pkey PRIMARY KEY (event_id);
+alter table public.zion_ministries add constraint zion_ministries_pkey PRIMARY KEY (id);
 alter table public.zion_moment_runs add constraint zion_moment_runs_pkey PRIMARY KEY (event_id, moment_id);
 alter table public.zion_moments add constraint zion_moments_pkey PRIMARY KEY (id);
 alter table public.zion_preparation add constraint zion_preparation_pkey PRIMARY KEY (id);
@@ -130,12 +142,16 @@ alter table public.zion_access add constraint zion_access_role_check CHECK ((rol
 alter table public.zion_events add constraint zion_events_notes_url_check CHECK (((notes_url IS NULL) OR (notes_url ~* '^https?://[^[:space:]]+$'::text)));
 alter table public.zion_feedback add constraint zion_feedback_content_size_check CHECK ((octet_length(content) <= 20000));
 alter table public.zion_live_timer add constraint zion_live_timer_stage_message_check CHECK ((char_length(stage_message) <= 120));
+alter table public.zion_ministries add constraint zion_ministries_color_check CHECK ((color ~ '^#[0-9a-fA-F]{6}$'::text));
+alter table public.zion_ministries add constraint zion_ministries_logo_check CHECK (((logo_url IS NULL) OR ((logo_url ~ '^data:image/(png|jpeg);base64,'::text) AND (char_length(logo_url) <= 420000))));
+alter table public.zion_ministries add constraint zion_ministries_name_check CHECK (((char_length(btrim(name)) >= 1) AND (char_length(btrim(name)) <= 60)));
 alter table public.zion_moments add constraint zion_moments_completed_item_indexes_check CHECK ((0 <= ALL (completed_item_indexes)));
 alter table public.zion_moments add constraint zion_moments_duration_minutes_check CHECK ((duration_minutes > 0));
 alter table public.zion_moments add constraint zion_moments_sequence_items_check CHECK ((jsonb_typeof(sequence_items) = 'array'::text));
 alter table public.zion_roster add constraint zion_roster_decline_reason_check CHECK ((char_length(decline_reason) <= 200));
 alter table public.zion_roster add constraint zion_roster_status_check CHECK ((status = ANY (ARRAY['pendente'::text, 'confirmado'::text, 'recusado'::text])));
 alter table public.zion_volunteers add constraint zion_volunteers_photo_url_size_check CHECK (((photo_url IS NULL) OR (octet_length(photo_url) <= 700000)));
+alter table public.zion_events add constraint zion_events_ministry_id_fkey FOREIGN KEY (ministry_id) REFERENCES zion_ministries(id) ON DELETE SET NULL;
 alter table public.zion_feedback add constraint zion_feedback_event_id_fkey FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE;
 alter table public.zion_issues add constraint zion_issues_event_id_fkey FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE;
 alter table public.zion_live_timer add constraint zion_live_timer_event_id_fkey FOREIGN KEY (event_id) REFERENCES zion_events(id) ON DELETE CASCADE;
@@ -246,15 +262,25 @@ AS $function$
       select jsonb_agg(jsonb_build_object(
                'event_id', e.id, 'title', e.title, 'date', e.event_date,
                'time', to_char(e.start_time, 'HH24:MI'), 'location', e.location,
-               'status', r.status, 'reason', r.decline_reason)
+               'status', r.status, 'reason', r.decline_reason, 'ministry_id', e.ministry_id)
              order by e.event_date, e.start_time)
         from public.zion_roster r
         join public.zion_events e on e.id = r.event_id
-       where r.volunteer_id = v.id and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1), '[]'::jsonb),
+       where r.volunteer_id = v.id
+         and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1), '[]'::jsonb),
+    'ministries', coalesce((
+      select jsonb_object_agg(m.id, jsonb_build_object('name', m.name, 'color', m.color, 'logo', m.logo_url))
+        from public.zion_ministries m
+       where m.id in (
+         select e.ministry_id from public.zion_roster r
+           join public.zion_events e on e.id = r.event_id
+          where r.volunteer_id = v.id
+            and e.event_date >= (now() at time zone 'America/Sao_Paulo')::date - 1)), '{}'::jsonb),
     'blocks', coalesce((
       select jsonb_agg(b.day order by b.day)
         from public.zion_volunteer_blocks b
-       where b.volunteer_id = v.id and b.day >= (now() at time zone 'America/Sao_Paulo')::date), '[]'::jsonb))
+       where b.volunteer_id = v.id
+         and b.day >= (now() at time zone 'America/Sao_Paulo')::date), '[]'::jsonb))
   from public.zion_volunteers v
   where v.portal_token = p_token
 $function$;
@@ -313,6 +339,18 @@ begin
 end;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.zion_tv_identity(p_event uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select jsonb_build_object('name', m.name, 'color', m.color, 'logo', m.logo_url)
+    from public.zion_events e
+    join public.zion_ministries m on m.id = e.ministry_id
+   where e.id = p_event
+$function$;
+
 -- Triggers
 CREATE TRIGGER zion_live_timer_touch BEFORE INSERT OR UPDATE ON public.zion_live_timer FOR EACH ROW EXECUTE FUNCTION zion_live_timer_touch();
 CREATE TRIGGER zion_moment_runs_start AFTER INSERT OR UPDATE OF running, moment_id ON public.zion_live_timer FOR EACH ROW EXECUTE FUNCTION zion_moment_runs_start();
@@ -324,6 +362,7 @@ alter table public.zion_events enable row level security;
 alter table public.zion_feedback enable row level security;
 alter table public.zion_issues enable row level security;
 alter table public.zion_live_timer enable row level security;
+alter table public.zion_ministries enable row level security;
 alter table public.zion_moment_runs enable row level security;
 alter table public.zion_moments enable row level security;
 alter table public.zion_preparation enable row level security;
@@ -392,6 +431,19 @@ create policy manager_write on public.zion_live_timer
   with check ((zion_current_role() = ANY (ARRAY['admin'::text, 'manager'::text])));
 
 create policy member_read on public.zion_live_timer
+  as permissive
+  for select
+  to authenticated
+  using ((zion_current_role() IS NOT NULL));
+
+create policy admin_write on public.zion_ministries
+  as permissive
+  for all
+  to authenticated
+  using ((zion_current_role() = 'admin'::text))
+  with check ((zion_current_role() = 'admin'::text));
+
+create policy member_read on public.zion_ministries
   as permissive
   for select
   to authenticated
@@ -486,6 +538,8 @@ grant delete, insert, select, update on public.zion_issues to authenticated;
 grant delete, insert, references, select, trigger, truncate, update on public.zion_issues to service_role;
 grant delete, insert, select, update on public.zion_live_timer to authenticated;
 grant delete, insert, references, select, trigger, truncate, update on public.zion_live_timer to service_role;
+grant delete, insert, select, update on public.zion_ministries to authenticated;
+grant delete, insert, references, select, trigger, truncate, update on public.zion_ministries to service_role;
 grant delete, insert, select, update on public.zion_moment_runs to authenticated;
 grant delete, insert, references, select, trigger, truncate, update on public.zion_moment_runs to service_role;
 grant delete, insert, select, update on public.zion_moments to authenticated;
