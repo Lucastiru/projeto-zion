@@ -223,8 +223,35 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
     };
     const saved = await setEvents((v) => editing ? v.map(x => x.id === item.id ? item : x) : [...v, item]);
     if (!saved) return;
+    const copyField = f.get('copy_from');
+    const source = !editing && typeof copyField === 'string' ? copyField : '';
+    if (source && !(await copyEvent(source, String(item.id), f.get('copy_prep') === 'on'))) return;
     setSelectedEvent(item.id);
     setEventOpen(null);
+  }
+  // Toda semana o roteiro é quase o mesmo do culto anterior: copiar e ajustar o
+  // que mudou é o caminho, não redigitar nove momentos. Vai linha a linha com
+  // select('*') para que coluna nova no momento (hora marcada, por exemplo) já
+  // venha junto sem ninguém lembrar de mexer aqui. O que é do dia — concluído,
+  // músicas riscadas, checklist feito — nasce zerado.
+  async function copyEvent(from: string, to: string, withPrep: boolean) {
+    const fresh = (rows: Record<string, unknown>[] | null) =>
+      (rows || []).map(({ id: _id, event_id: _event, created_at: _created, ...rest }) => ({ ...rest, event_id: to }));
+    const moments = await supabase.from('zion_moments').select('*').eq('event_id', from).order('position');
+    if (moments.error) { report('Evento criado, mas o roteiro não foi copiado: ' + moments.error.message); return false; }
+    const copied = fresh(moments.data).map(m => ({ ...m, completed: false, completed_item_indexes: [] }));
+    if (copied.length) {
+      const { error } = await supabase.from('zion_moments').insert(copied);
+      if (error) { report('Evento criado, mas o roteiro não foi copiado: ' + error.message); return false; }
+    }
+    if (withPrep) {
+      const prep = await supabase.from('zion_preparation').select('*').eq('event_id', from);
+      const items = fresh(prep.data).map(p => ({ ...p, completed: false }));
+      const { error } = prep.error ? prep : items.length ? await supabase.from('zion_preparation').insert(items) : { error: null };
+      if (error) { report('Roteiro copiado, mas o checklist não: ' + error.message); return false; }
+    }
+    report(`Roteiro copiado: ${copied.length} momentos.`);
+    return true;
   }
   async function saveVolunteer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -691,6 +718,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
           close={() => setEventOpen(null)}
           save={saveEvent}
           event={eventOpen === 'new' ? undefined : eventOpen}
+          events={events}
         />
       )}{' '}
       {volunteerEditing !== null && (
@@ -1474,11 +1502,16 @@ function EventModal({
   close,
   save,
   event,
+  events,
 }: {
   close: () => void;
   save: (e: React.FormEvent<HTMLFormElement>) => void;
   event?: ChurchEvent;
+  events: ChurchEvent[];
 }) {
+  // O mais recente vem primeiro e já selecionado: é quase sempre o culto da
+  // semana passada, que é de onde se quer partir.
+  const sources = [...events].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   return (
     <div className="modal-backdrop">
       <form className="modal" onSubmit={save}>
@@ -1536,6 +1569,25 @@ function EventModal({
             defaultValue={event?.notes}
           />
         </label>
+        {!event && sources.length > 0 && (
+          <div className="copy-source">
+            <label>
+              Começar a partir de
+              <select name="copy_from" defaultValue={String(sources[0].id)}>
+                <option value="">Roteiro em branco</option>
+                {sources.map(s => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.title} • {s.date.split('-').reverse().join('/')}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="copy-check">
+              <input type="checkbox" name="copy_prep" defaultChecked /> Copiar também o checklist de preparação
+            </label>
+            <small className="field-help">Copia momentos, durações, responsáveis e sequência. Depois é só ajustar o que mudou.</small>
+          </div>
+        )}
         <div className="modal-actions">
           <button type="button" className="ghost-btn" onClick={close}>
             Cancelar
