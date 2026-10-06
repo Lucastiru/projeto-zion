@@ -12,6 +12,9 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [signup, setSignup] = useState(false);
+  const [areas,setAreas]=useState<{id:string;name:string;color:string}[]>([]);
+  const [selectedAreas,setSelectedAreas]=useState<string[]>([]);
+  const invite = typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('convite') || '';
   useEffect(() => {
     let alive = true;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
@@ -23,10 +26,19 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
   useEffect(() => {
+    supabase.rpc('zion_public_areas').then(({data})=>setAreas(data||[]));
+  },[]);
+  useEffect(() => {
     let alive = true;
     setRole(null);
     if (!session) return;
-    supabase.rpc('zion_current_role').then(({ data, error }) => {
+    const inviteToken=invite || String(session.user.user_metadata?.invite_token || '');
+    const accept=inviteToken ? supabase.rpc('zion_accept_invite',{p_token:inviteToken}) : Promise.resolve({data:null,error:null});
+    accept.then(({error:inviteError})=>{
+      if(inviteError)setMessage('Não foi possível aceitar o convite: '+inviteError.message);
+      else if(inviteToken)history.replaceState({},'',location.pathname);
+      return supabase.rpc('zion_current_role');
+    }).then(({ data, error }) => {
       if (!alive) return;
       if (data) {
         setRole(data);
@@ -49,7 +61,7 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
     const credentials = { email: String(form.get('email')).trim().toLowerCase(), password: String(form.get('password')) };
     try {
       const result = signup
-        ? await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: window.location.origin, data: { first_name: String(form.get('first_name')).trim(), last_name: String(form.get('last_name')).trim(), name: `${String(form.get('first_name')).trim()} ${String(form.get('last_name')).trim()}` } } })
+        ? await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: `${window.location.origin}/${invite?`?convite=${encodeURIComponent(invite)}`:''}`, data: { first_name: String(form.get('first_name')).trim(), last_name: String(form.get('last_name')).trim(), name: `${String(form.get('first_name')).trim()} ${String(form.get('last_name')).trim()}`, area_ids:selectedAreas, invite_token:invite||undefined } } })
         : await supabase.auth.signInWithPassword(credentials);
       if (result.error) throw result.error;
       if (signup && !result.data.session) setMessage('Confirme o cadastro pelo e-mail enviado. Depois volte aqui e entre com sua senha.');
@@ -64,11 +76,13 @@ export function ZionAuth({ children }: { children: (session: Session, role: stri
       <h1>A equipe começa aqui.</h1>
     </header>
     {loading || (session && role === null) ? <p>Verificando seu acesso…</p> : session ? <>
-      <p>Seu e-mail ainda não está autorizado. Peça ao administrador para liberar seu acesso.</p>
+      <p>Cadastro recebido. Seu acesso está aguardando a aprovação de um administrador.</p>
       <Button onClick={() => supabase.auth.signOut()}>Sair e trocar de conta</Button>
     </> : <form onSubmit={submit}>
-      <p>{signup ? 'Crie sua senha. O acesso aos dados depende da autorização do administrador.' : 'Entre para organizar os cultos com a sua equipe.'}</p>
+      {invite&&<p className="invite-banner"><strong>Você recebeu um convite.</strong> Entre com sua conta ou crie uma senha para aceitar.</p>}
+      <p>{signup ? 'Crie sua conta. Sem convite, o acesso só será liberado depois da aprovação do administrador.' : 'Entre para organizar os cultos com a sua equipe.'}</p>
       {signup && <div className="form-grid"><label>Nome<Input name="first_name" autoComplete="given-name" required maxLength={60}/></label><label>Sobrenome<Input name="last_name" autoComplete="family-name" required maxLength={80}/></label></div>}
+      {signup&&<fieldset className="area-checks signup-areas"><legend>Em quais áreas você serve?</legend>{areas.map(a=><label key={a.id}><input type="checkbox" checked={selectedAreas.includes(a.id)} onChange={e=>setSelectedAreas(v=>e.target.checked?[...v,a.id]:v.filter(id=>id!==a.id))}/><i style={{background:a.color}}/>{a.name}</label>)}</fieldset>}
       <label>E-mail<Input name="email" type="email" autoComplete="email" required /></label>
       <label>Senha<Input name="password" type="password" minLength={8} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
       <Button type="submit" disabled={busy}>{busy ? 'Aguarde…' : signup ? 'Criar minha conta' : 'Entrar'}</Button>

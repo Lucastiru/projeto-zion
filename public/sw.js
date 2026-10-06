@@ -1,4 +1,4 @@
-const CACHE = 'zion-pwa-v2';
+const CACHE = 'zion-pwa-v3';
 const CORE = ['/', '/offline.html', '/favicon.svg', '/zion-logo.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'];
 
 self.addEventListener('install', event => {

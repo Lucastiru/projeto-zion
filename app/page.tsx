@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ZionAuth } from '@/components/zion-auth';
 import { AccountPanel } from '@/components/zion-account';
-import { UsersPanel, SettingsPanel } from '@/components/zion-users';
+import { SettingsPanel } from '@/components/zion-users';
+import { AccessAdminPanel } from '@/components/zion-access-admin';
 import { useZionData } from '@/lib/zion-data';
 import { downloadSchedulePdf } from '@/lib/zion-pdf';
 import { supabase } from '@/lib/supabase';
@@ -513,7 +514,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
         </header>
         <div className="page-wrap">
           {failed && view!=='settings' && view!=='users' && <p role="alert" className="operation-error">Não foi possível concluir a operação. Verifique sua conexão e tente novamente.{role==='admin' && <button onClick={()=>setView('settings')}>Ver detalhes</button>}</p>}
-          {view==='users' && role==='admin' && <UsersPanel role={role} email={session.user.email || ''}/>}
+          {view==='users' && role==='admin' && <AccessAdminPanel role={role} email={session.user.email || ''}/>}
           {view==='settings' && role==='admin' && <SettingsPanel role={role} status={loading ? 'Carregando dados…' : status}/>}
           {view==='settings' && role==='admin' && <MinistriesPanel ministries={ministries} setMinistries={setMinistries} report={report}/>}
 
