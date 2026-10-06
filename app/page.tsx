@@ -12,6 +12,7 @@ import { clockOf, compare, plan, project, toMinutes, warnSeconds, type Planned }
 import { brandStyle, ZION, type Brand } from '@/lib/zion-brand';
 import { MinistriesPanel } from '@/components/zion-ministries';
 import type { Session } from '@supabase/supabase-js';
+import QRCode from 'qrcode';
 import {
   AlertTriangle,
   BarChart3,
@@ -1057,7 +1058,10 @@ function ScheduleView({
   report: (text:string)=>void;
 }) {
   const [dragged,setDragged]=useState<number|null>(null);
+  const [showQr,setShowQr]=useState(false);
+  const [qr,setQr]=useState('');
   const publicUrl=event?.publicToken ? `${window.location.origin}/plano?t=${event.publicToken}` : '';
+  useEffect(()=>{if(!publicUrl){setQr('');return;}void QRCode.toDataURL(publicUrl,{width:420,margin:2,color:{dark:'#15382d',light:'#ffffff'}}).then(setQr);},[publicUrl]);
   async function saveTemplate(){
     if(!event || !timings.length)return;
     const name=window.prompt('Nome do modelo',event.type || event.title); if(!name?.trim())return;
@@ -1089,6 +1093,7 @@ function ScheduleView({
           <select className="template-select" defaultValue="" onChange={e=>{void applyTemplate(e.target.value);e.currentTarget.value='';}} disabled={!templates.length}><option value="">Usar modelo…</option>{templates.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select>
           <button className="ghost-btn" onClick={()=>void saveTemplate()} disabled={!event||!timings.length}><Sparkles size={15}/> Salvar como modelo</button>
           <button className="ghost-btn" onClick={()=>void copyPublic()} disabled={!publicUrl}><Link2 size={15}/> Link público</button>
+          <button className="ghost-btn" onClick={()=>setShowQr(v=>!v)} disabled={!qr}>{showQr?'Fechar QR':'QR Code'}</button>
           <button className="ghost-btn" disabled={!event || !timings.length} onClick={() => event && void downloadSchedulePdf(event, timings, total, brand)}>
             <FileText size={15} /> Baixar PDF
           </button>
@@ -1111,6 +1116,7 @@ function ScheduleView({
           </button>
         </div>
       </div>
+      {showQr&&qr&&<div className="qr-card"><img src={qr} alt="QR Code do plano público"/><div><strong>Plano público</strong><p>Aponte a câmera do celular. A pessoa abre a ordem sem criar conta e não vê escala nem administração.</p><button className="ghost-btn" onClick={()=>void copyPublic()}>Copiar link</button></div></div>}
       <div className="timeline-summary">
         <div>
           <span>Início</span>
