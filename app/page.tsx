@@ -8,7 +8,7 @@ import { downloadSchedulePdf } from '@/lib/zion-pdf';
 import { supabase } from '@/lib/supabase';
 import { clock, useTvBroadcast, useTvLink } from '@/lib/zion-tv';
 import { useLiveTimer } from '@/lib/zion-timer';
-import { clockOf, compare, plan, project, warnSeconds, type Planned } from '@/lib/zion-plan';
+import { clockOf, compare, plan, project, toMinutes, warnSeconds, type Planned } from '@/lib/zion-plan';
 import { brandStyle, ZION, type Brand } from '@/lib/zion-brand';
 import { MinistriesPanel } from '@/components/zion-ministries';
 import type { Session } from '@supabase/supabase-js';
@@ -23,6 +23,7 @@ import {
   ChevronRight,
   CircleAlert,
   FileText,
+  Link2,
   GripVertical,
   LayoutList,
   Maximize2,
@@ -35,6 +36,7 @@ import {
   Radio,
   Settings,
   ShieldCheck,
+  Sparkles,
   Trash2,
   Tv,
   Users,
@@ -52,6 +54,10 @@ export type Moment = {
   // Hora de relógio em que o momento tem de começar (HH:MM). Vazio = começa
   // quando o anterior acabar.
   hardStart?: string;
+  itemType?: 'momento'|'louvor'|'palavra'|'midia'|'transicao'|'oracao'|'aviso';
+  itemColor?: string;
+  attachments?: { title:string; url:string }[];
+  teamNotes?: { team:string; note:string }[];
   done?: boolean;
 };
 export type Issue = {
@@ -78,7 +84,9 @@ export type ChurchEvent = {
   notes?: string;
   // Ministério dono do evento; vazio = Zion Church. Ver zion_ministries.
   ministryId?: string;
+  publicToken?: string;
 };
+export type ServiceTemplate = { id:string|number; name:string; eventType:string; ministryId?:string; moments:Moment[]; preparation:PrepItem[] };
 // Identidade visual de um ministério (Eklektos, ...): aparece nas telas dos
 // eventos dele — operador, TV, link do voluntário e PDF.
 export type Ministry = {
@@ -128,7 +136,7 @@ function safeDuration(value: number) {
 export default function Home() { return <ZionAuth>{(session,role) => <ZionWorkspace session={session} role={role}/>}</ZionAuth>; }
 function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [selectedEvent,setSelectedEvent] = useState<string | number>('');
-  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,markInvited,reloadRoster,ministries,setMinistries,status,loading,report} = useZionData(selectedEvent);
+  const {events,setEvents,moments,setMoments,prep,setPrep,issues,setIssues,volunteers,setVolunteers,markInvited,reloadRoster,ministries,setMinistries,templates,setTemplates,status,loading,report} = useZionData(selectedEvent);
   useEffect(() => { if (!selectedEvent && events.length) setSelectedEvent(events[0].id); },[events,selectedEvent]);
   const [view, setView] = useState('calendar');
   const displayName = session.user.user_metadata?.name || 'Meu perfil';
@@ -162,6 +170,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [liveFullscreen, setLiveFullscreen] = useState(false);
   const [tvOpen, setTvOpen] = useState(false);
+  const [autoAdvance,setAutoAdvance] = useState(false);
   // O roteiro no papel, respeitando hora marcada: ver lib/zion-plan.ts.
   const slots = useMemo(() => moments.map(m => ({ duration: safeDuration(m.duration), hardStart: m.hardStart || undefined })), [moments]);
   const planned = useMemo(() => plan(start, slots), [start, slots]);
@@ -210,6 +219,10 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
       details: String(f.get('details')).trim(),
       items,
       hardStart: (() => { const v = f.get('hard_start'); return typeof v === 'string' ? v : ''; })(),
+      itemType: String(f.get('item_type') || 'momento') as Moment['itemType'],
+      itemColor: String(f.get('item_color') || '#2f6b57'),
+      attachments: String(f.get('attachments') || '').split('\n').map(line=>{const [title,...url]=line.split('|');return {title:(title||'Arquivo').trim(),url:url.join('|').trim()};}).filter(x=>driveLink(x.url)),
+      teamNotes: String(f.get('team_notes') || '').split('\n').map(line=>{const [team,...note]=line.split(':');return {team:(team||'Equipe').trim(),note:note.join(':').trim()};}).filter(x=>x.note),
     };
     const saved = await setMoments((ms) =>
       isNew
@@ -312,6 +325,16 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
     if (current < moments.length - 1) goTo(current + 1);
     else { stop(); setView('report'); }
   }
+  useEffect(() => {
+    if (!autoAdvance || !canDrive || !running || seconds > 0 || !active || current >= moments.length - 1) return;
+    void complete();
+  },[autoAdvance,canDrive,running,seconds,active?.id,current,moments.length]);
+  useEffect(() => {
+    if (!autoAdvance || !canDrive || !running) return;
+    const minute = new Date(now()).getHours()*60+new Date(now()).getMinutes();
+    const target = moments.findIndex((m,i)=>i>current && !!m.hardStart && (Number(m.hardStart.slice(0,2))*60+Number(m.hardStart.slice(3)))<=minute);
+    if(target>current) goTo(target);
+  },[autoAdvance,canDrive,running,current,moments,now]);
   async function toggleSequenceItem(index: number) {
     if (!active || !canDrive) return;
     await setMoments((ms) => ms.map((moment) => {
@@ -510,6 +533,8 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                         <p>{active.title}</p>
                         <h2>{active.owner}</h2>
                         <span>{active.details}</span>
+                        {!!active.teamNotes?.length && <div className="team-notes">{active.teamNotes.map(x=><p key={`${x.team}-${x.note}`}><b>{x.team}:</b> {x.note}</p>)}</div>}
+                        {!!active.attachments?.length && <div className="moment-links">{active.attachments.map(x=><a href={driveLink(x.url)} target="_blank" rel="noopener noreferrer" key={x.url}><Link2 size={12}/>{x.title}</a>)}</div>}
                         {active.items?.length ? (
                           <ol className="live-sequence live-sequence-checklist">
                             {active.items.map((item, i) => (
@@ -569,6 +594,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                       >
                         <AlertTriangle size={15} /> Registrar problema
                       </button>
+                      <label className="auto-advance"><input type="checkbox" checked={autoAdvance} onChange={e=>setAutoAdvance(e.target.checked)} disabled={!canDrive}/> Avançar automaticamente no zero</label>
                     </div>
                     {canDrive && <StageMessage current={message} send={say} />}
                     {(driver || !canDrive) && (
@@ -588,6 +614,7 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
                       Término previsto {finish}
                       {forecast && Math.abs(offset) >= 1 ? ` (papel: ${timings.at(-1)?.end})` : ''}
                     </span>
+                    {timings.slice(current+1).find(x=>x.hardStart) && (()=>{const cue=timings.slice(current+1).find(x=>x.hardStart)!; const mins=Math.max(0,Math.round((Number(cue.hardStart!.slice(0,2))*60+Number(cue.hardStart!.slice(3))-nowMinutes))); return <span className="hard-cue">Próxima hora marcada: {cue.title} às {cue.hardStart} · em {mins} min</span>;})()}
                   </div>
                   <div className="schedule-list">
                     {timings.map((item, i) => (
@@ -710,6 +737,11 @@ function ZionWorkspace({session,role}:{session:Session;role:string}) {
               start={start}
               setEditing={setEditing}
               setMoments={setMoments}
+              prep={prep}
+              setPrep={setPrep}
+              templates={templates}
+              setTemplates={setTemplates}
+              report={report}
             />
           )}{' '}
           {view === 'prep' && (
@@ -1005,6 +1037,11 @@ function ScheduleView({
   start,
   setEditing,
   setMoments,
+  prep,
+  setPrep,
+  templates,
+  setTemplates,
+  report,
 }: {
   event?: ChurchEvent;
   brand: Brand | null;
@@ -1013,7 +1050,31 @@ function ScheduleView({
   start: string;
   setEditing: (m: Moment) => void;
   setMoments: React.Dispatch<React.SetStateAction<Moment[]>>;
+  prep: PrepItem[];
+  setPrep: React.Dispatch<React.SetStateAction<PrepItem[]>>;
+  templates: ServiceTemplate[];
+  setTemplates: React.Dispatch<React.SetStateAction<ServiceTemplate[]>>;
+  report: (text:string)=>void;
 }) {
+  const [dragged,setDragged]=useState<number|null>(null);
+  const publicUrl=event?.publicToken ? `${window.location.origin}/plano?t=${event.publicToken}` : '';
+  async function saveTemplate(){
+    if(!event || !timings.length)return;
+    const name=window.prompt('Nome do modelo',event.type || event.title); if(!name?.trim())return;
+    const clean=timings.map(({time:_time,end:_end,hard:_hard,overlap:_overlap,done:_done,completedItems:_completed,...m})=>({...m,id:crypto.randomUUID()}));
+    setTemplates(v=>[...v,{id:crypto.randomUUID(),name:name.trim(),eventType:event.type,ministryId:event.ministryId,moments:clean,preparation:prep.map(x=>({...x,id:crypto.randomUUID(),done:false}))}]);
+  }
+  async function applyTemplate(id:string){
+    const template=templates.find(x=>String(x.id)===id); if(!template)return;
+    if(timings.length && !window.confirm('Substituir o cronograma atual por este modelo?'))return;
+    setMoments(template.moments.map(m=>({...m,id:crypto.randomUUID(),done:false,completedItems:[]})));
+    setPrep(template.preparation.map(x=>({...x,id:crypto.randomUUID(),done:false})));
+  }
+  async function copyPublic(){if(!publicUrl)return;await navigator.clipboard.writeText(publicUrl);report('Link público do plano copiado.');}
+  function resolveOverlap(index:number,mode:'shorten'|'move'){
+    const late=timings[index].overlap; if(!late)return;
+    setMoments(list=>list.map((m,i)=>mode==='shorten'&&i===index-1?{...m,duration:Math.max(1,m.duration-late)}:mode==='move'&&i===index?{...m,hardStart:clockOf(toMinutes(m.hardStart||timings[index].time)+late)}:m));
+  }
   return (
     <div className="surface">
       <div className="view-head">
@@ -1025,6 +1086,9 @@ function ScheduleView({
           </p>
         </div>
         <div className="view-actions">
+          <select className="template-select" defaultValue="" onChange={e=>{void applyTemplate(e.target.value);e.currentTarget.value='';}} disabled={!templates.length}><option value="">Usar modelo…</option>{templates.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select>
+          <button className="ghost-btn" onClick={()=>void saveTemplate()} disabled={!event||!timings.length}><Sparkles size={15}/> Salvar como modelo</button>
+          <button className="ghost-btn" onClick={()=>void copyPublic()} disabled={!publicUrl}><Link2 size={15}/> Link público</button>
           <button className="ghost-btn" disabled={!event || !timings.length} onClick={() => event && void downloadSchedulePdf(event, timings, total, brand)}>
             <FileText size={15} /> Baixar PDF
           </button>
@@ -1075,19 +1139,21 @@ function ScheduleView({
         )}
       </div>
       <div className="editor-list">
-        {timings.map((m) => (
-          <div className="editor-row" key={m.id}>
+        {timings.map((m,index) => (
+          <div className="editor-row" key={m.id} draggable onDragStart={()=>setDragged(index)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(dragged===null||dragged===index)return;setMoments(list=>{const next=[...list];const [item]=next.splice(dragged,1);next.splice(index,0,item);return next;});setDragged(null);}}>
             <GripVertical size={18} />
+            <i className="moment-color" style={{background:m.itemColor||'#2f6b57'}} title={m.itemType}/>
             <div className="editor-time">
               <strong>{m.hard ? '⚓ ' : ''}{m.time}</strong>
               <span>até {m.end}</span>
-              {m.overlap > 0 && <em className="anchor-late">o anterior passa {m.overlap} min da hora marcada</em>}
+              {m.overlap > 0 && <em className="anchor-late">o anterior passa {m.overlap} min da hora marcada <button type="button" onClick={()=>resolveOverlap(index,'shorten')}>Encurtar anterior</button><button type="button" onClick={()=>resolveOverlap(index,'move')}>Mover hora marcada</button></em>}
             </div>
             <div className="editor-main">
               <strong>{m.title}</strong>
               <span>
-                {m.owner} • {m.details}
+                {m.owner} • {m.itemType || 'momento'}{m.details ? ` • ${m.details}` : ''}
               </span>
+              {!!m.attachments?.length && <small>{m.attachments.length} arquivo(s) ou link(s)</small>}
             </div>
             <b>{m.duration} min</b>
             <button onClick={() => setEditing(m)}>
@@ -1650,6 +1716,10 @@ function MomentModal({
           </small>
           <input name="hard_start" type="time" defaultValue={moment?.hardStart} />
         </label>
+        <div className="form-grid">
+          <label>Tipo<select name="item_type" defaultValue={moment?.itemType||'momento'}><option value="momento">Momento</option><option value="louvor">Louvor</option><option value="palavra">Palavra</option><option value="midia">Mídia</option><option value="transicao">Transição</option><option value="oracao">Oração</option><option value="aviso">Aviso</option></select></label>
+          <label>Cor<input name="item_color" type="color" defaultValue={moment?.itemColor||'#2f6b57'}/></label>
+        </div>
         <label>
           Orientações para a equipe
           <textarea name="details" defaultValue={moment?.details} />
@@ -1668,6 +1738,8 @@ function MomentModal({
             }
           />
         </label>
+        <label>Arquivos e links <small className="field-help">Um por linha: Título | https://drive.google.com/...</small><textarea name="attachments" defaultValue={moment?.attachments?.map(x=>`${x.title} | ${x.url}`).join('\n')}/></label>
+        <label>Notas por equipe <small className="field-help">Uma por linha: Mídia: preparar vídeo de abertura</small><textarea name="team_notes" defaultValue={moment?.teamNotes?.map(x=>`${x.team}: ${x.note}`).join('\n')}/></label>
         <div className="modal-actions">
           <button type="button" className="ghost-btn" onClick={close}>
             Cancelar

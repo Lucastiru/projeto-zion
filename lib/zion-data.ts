@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
-import type { Moment, Issue, PrepItem, ChurchEvent, Volunteer, Ministry } from '@/app/page';
+import type { Moment, Issue, PrepItem, ChurchEvent, Volunteer, Ministry, ServiceTemplate } from '@/app/page';
 
 type Row = Record<string, any>;
 type Update<T> = T[] | ((previous: T[]) => T[]);
@@ -20,7 +20,7 @@ function writeOffline<T>(table: string, event: string | number | undefined, rows
   try { localStorage.setItem(offlineKey(table, event), JSON.stringify(rows)); } catch {}
 }
 const eventsCodec: Codec<ChurchEvent> = {
-  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '', ministryId:r.ministry_id || '' }),
+  read: r => ({ id:r.id, title:r.title, date:r.event_date, time:r.start_time.slice(0,5), type:r.event_type, location:r.location, notes:r.notes_url || '', ministryId:r.ministry_id || '', publicToken:r.public_token || '' }),
   write: r => ({ id:r.id, title:r.title, event_date:r.date, start_time:r.time, event_type:r.type, location:r.location, notes_url:r.notes?.trim() || null, ministry_id:r.ministryId || null }),
 };
 const ministriesCodec: Codec<Ministry> = {
@@ -28,8 +28,12 @@ const ministriesCodec: Codec<Ministry> = {
   write: r => ({ id:r.id, name:r.name.trim(), color:r.color, logo_url:r.logo || null }),
 };
 const momentsCodec: Codec<Moment> = {
-  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], hardStart:r.hard_start ? String(r.hard_start).slice(0,5) : '', done:r.completed }),
-  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed_item_indexes:r.completedItems || [], hard_start:r.hardStart || null, completed:!!r.done, position:i }),
+  read: r => ({ id:r.id, title:r.title, duration:r.duration_minutes, owner:r.owner_name, details:r.details, items:r.sequence_items, completedItems:r.completed_item_indexes || [], hardStart:r.hard_start ? String(r.hard_start).slice(0,5) : '', itemType:r.item_type || 'momento', itemColor:r.item_color || '#2f6b57', attachments:r.attachments || [], teamNotes:r.team_notes || [], done:r.completed }),
+  write: (r,i) => ({ id:r.id, title:r.title, duration_minutes:r.duration, owner_name:r.owner, details:r.details, sequence_items:r.items || [], completed_item_indexes:r.completedItems || [], hard_start:r.hardStart || null, item_type:r.itemType || 'momento', item_color:r.itemColor || '#2f6b57', attachments:r.attachments || [], team_notes:r.teamNotes || [], completed:!!r.done, position:i }),
+};
+const templatesCodec: Codec<ServiceTemplate> = {
+  read: r => ({ id:r.id,name:r.name,eventType:r.event_type,ministryId:r.ministry_id || '',moments:r.moments || [],preparation:r.preparation || [] }),
+  write: r => ({ id:r.id,name:r.name.trim(),event_type:r.eventType,ministry_id:r.ministryId || null,moments:r.moments,preparation:r.preparation }),
 };
 const prepCodec: Codec<PrepItem> = {
   read: r => ({ id:r.id, team:r.team, text:r.description, assigned:r.assigned_to || '', done:r.completed }),
@@ -134,6 +138,7 @@ export function useZionData(event: string | number) {
   const events = useRows('zion_events',eventsCodec,undefined,report);
   const volunteers = useRows('zion_volunteers',volunteersCodec,undefined,report);
   const ministries = useRows('zion_ministries',ministriesCodec,undefined,report);
+  const templates = useRows('zion_service_templates',templatesCodec,undefined,report);
   const moments = useRows('zion_moments',momentsCodec,event,report);
   const prep = useRows('zion_preparation',prepCodec,event,report);
   const issues = useRows('zion_issues',issuesCodec,event,report);
@@ -181,7 +186,7 @@ export function useZionData(event: string | number) {
     }
     if (eventRef.current === event) setRoster(next.filter(x => x.scheduled).map(x => String(x.id))); return true;
   }
-  return { events:events.rows,setEvents:events.change,ministries:ministries.rows,setMinistries:ministries.change,volunteers:visibleVolunteers,setVolunteers,markInvited,reloadRoster:() => setRosterVersion(n => n + 1),
+  return { events:events.rows,setEvents:events.change,ministries:ministries.rows,setMinistries:ministries.change,templates:templates.rows,setTemplates:templates.change,volunteers:visibleVolunteers,setVolunteers,markInvited,reloadRoster:() => setRosterVersion(n => n + 1),
     moments:moments.rows,setMoments:moments.change,prep:prep.rows,setPrep:prep.change,issues:issues.rows,setIssues:issues.change,
     status,report,loading:events.loading || volunteers.loading || moments.loading || prep.loading || issues.loading || rosterLoading };
 }
